@@ -1,0 +1,26 @@
+/* Smooth transitions on color and background changes */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom scrollbar styling (optional aesthetic) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #1C7C84;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #e5f5f5;
+}
+
+/* Optional: gradient background helper (you can use via className="bg-login-gradient") */
+.bg-login-gradient {
+  background: linear-gradient(135deg, #1C7C84 0%, #146C70 100%);
+}
+
+/* Optional: shadow preset */
+.shadow-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
