@@ -1,145 +1,84 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import './Navbar.css';
+import { useState } from "react";
+import { BookOpen, Search, Bell, Upload, MessageCircle, Home, User } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
 
-function Navbar() {
+const navLinks = [
+  { label: "Home",          icon: Home,          path: "/home" },
+  { label: "Upload",        icon: Upload,        path: "/upload" },
+  { label: "Chat",          icon: MessageCircle, path: "/chat" },
+  { label: "Notifications", icon: Bell,          path: "/notifications" },
+];
+
+const Navbar = ({ onSearch }) => {
+  const navigate = useNavigate();
   const location = useLocation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showNotifications, setShowNotifications] = useState(false);
+  const { user } = useAuthStore();
+  const [search, setSearch] = useState("");
 
-  const isActive = (path) => {
-    return location.pathname === path;
+  const handleSearch = (val) => {
+    setSearch(val);
+    onSearch && onSearch(val);
   };
 
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
-        {/* Logo */}
-        <Link to="/Home" className="navbar-logo">
-          <div className="logo-icon">BH</div>
-          <span className="logo-text">BookHive</span>
-        </Link>
+    <nav className="bg-white border-b border-gray-200 px-6 h-[60px] flex items-center justify-between shrink-0 z-50 sticky top-0">
 
-        {/* Navigation Links */}
-        <div className="navbar-links">
-          <Link 
-            to="/Home" 
-            className={`nav-link ${isActive('/Home') ? 'active' : ''}`}
-          >
-            <span className="nav-icon">🏠</span>
-            <span className="nav-text">Home</span>
-          </Link>
-
-          <Link 
-            to="/BrowseBooks" 
-            className={`nav-link ${isActive('/BrowseBooks') ? 'active' : ''}`}
-          >
-            <span className="nav-icon">📚</span>
-            <span className="nav-text">Browse Books</span>
-          </Link>
-
-          <Link 
-            to="/MyListings" 
-            className={`nav-link ${isActive('/MyListings') ? 'active' : ''}`}
-          >
-            <span className="nav-icon">📋</span>
-            <span className="nav-text">My Listings</span>
-          </Link>
-
-          <Link 
-            to="/chat" 
-            className={`nav-link ${isActive('/chat') ? 'active' : ''}`}
-          >
-            <span className="nav-icon">💬</span>
-            <span className="nav-text">Chat</span>
-          </Link>
-
-          <Link 
-            to="/profile" 
-            className={`nav-link ${isActive('/profile') ? 'active' : ''}`}
-          >
-            <span className="nav-icon">👤</span>
-            <span className="nav-text">Profile</span>
-          </Link>
-
-          <Link 
-            to="/wishlist" 
-            className={`nav-link ${isActive('/wishlist') ? 'active' : ''}`}
-          >
-            <span className="nav-icon">❤️</span>
-            <span className="nav-text">Wishlist</span>
-          </Link>
+      {/* Logo */}
+      <div
+        className="flex items-center gap-2 shrink-0 cursor-pointer"
+        onClick={() => navigate("/")}
+      >
+        <div className="w-8 h-8 bg-[#1C7C84] rounded-lg flex items-center justify-center">
+          <BookOpen className="w-4 h-4 text-white" />
         </div>
+        <span className="text-[16px] font-bold text-gray-900">BookHive</span>
+      </div>
 
-        {/* Search Bar */}
-        <div className="navbar-search">
-          <input 
-            type="text" 
-            placeholder="Search books, authors, courses..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-          <span className="search-icon">🔍</span>
-        </div>
+      {/* Search */}
+      <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 w-[420px] max-w-[38vw] focus-within:border-[#1C7C84] transition shadow-none">
+        <Search className="w-4 h-4 text-gray-400 shrink-0" />
+        <input
+          type="text"
+          placeholder="Search books, notes, authors..."
+          className="bg-transparent outline-none text-sm text-gray-600 w-full placeholder:text-gray-400"
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+        />
+      </div>
 
-        {/* Right Side Actions */}
-        <div className="navbar-actions">
-          {/* Notifications */}
-          <div className="notification-wrapper">
-            <button 
-              className="notification-btn"
-              onClick={() => setShowNotifications(!showNotifications)}
+      {/* Right nav */}
+      <div className="flex items-center gap-1 shrink-0">
+        {navLinks.map(({ label, icon: Icon, path }) => {
+          const isActive = location.pathname === path;
+          return (
+            <button
+              key={label}
+              onClick={() => navigate(path)}
+              className={`relative flex items-center gap-1.5 text-[13px] font-medium px-3 py-1.5 rounded-lg transition
+                ${isActive
+                  ? "bg-[#1C7C84] text-white"
+                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"}`}
             >
-              <span className="notification-icon">🔔</span>
-              <span className="notification-badge">3</span>
+              <Icon className="w-4 h-4" />
+              <span>{label}</span>
+              {label === "Notifications" && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
+              )}
             </button>
+          );
+        })}
 
-            {showNotifications && (
-              <div className="notification-dropdown">
-                <div className="notification-header">
-                  <h3>Notifications</h3>
-                  <button className="mark-read-btn">Mark all as read</button>
-                </div>
-                <div className="notification-list">
-                  <div className="notification-item unread">
-                    <div className="notification-content">
-                      <p className="notification-title">New request for "Introduction to Algorithms"</p>
-                      <p className="notification-time">2 minutes ago</p>
-                    </div>
-                  </div>
-                  <div className="notification-item unread">
-                    <div className="notification-content">
-                      <p className="notification-title">Your listing has been viewed 5 times</p>
-                      <p className="notification-time">1 hour ago</p>
-                    </div>
-                  </div>
-                  <div className="notification-item">
-                    <div className="notification-content">
-                      <p className="notification-title">Message from John about Physics book</p>
-                      <p className="notification-time">3 hours ago</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="notification-footer">
-                  <Link to="/notifications">View all notifications</Link>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* User Profile Dropdown */}
-          <div className="user-menu">
-            <button className="user-btn">
-              <div className="user-avatar">A</div>
-              <span className="user-name">Account</span>
-              <span className="dropdown-arrow">▼</span>
-            </button>
-          </div>
-        </div>
+        {/* Avatar */}
+        <button
+          onClick={() => navigate("/profile")}
+          className="ml-1 w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center hover:bg-gray-200 transition"
+        >
+          <User className="w-4 h-4 text-gray-500" />
+        </button>
       </div>
     </nav>
   );
-}
+};
 
 export default Navbar;
