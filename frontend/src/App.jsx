@@ -11,6 +11,12 @@ import EmailVerificationPage from './Pages/EmailVerification';
 import StudentForm from './student/StudentForm';
 import AdminStudentReview from './admin/Adminstudentreview';
 import { useAuthStore } from './store/authStore';
+import UploadPage from './Pages/Upload';
+import ChatPage from './Pages/Chat';
+import NotificationsPage from './Pages/Notification';
+import DigitalNotes from './Pages/Digitalnotes';
+import SettingsPage from './Pages/Setting';
+import TransactionsPage from './Pages/Transactions';
 
 
 // ── Full desktop layout ───────────────────────────────────────────────────────
@@ -76,6 +82,7 @@ function App() {
         <Route path="/form-page"    element={<StudentForm />} />
        
         {/* ── Protected pages (must be logged in) ── */}
+        {/* homepage */}
         <Route
           path="/home"
           element={
@@ -84,15 +91,32 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* student homepage */}
         <Route
-          path="/Homepage"
-          element={
+          path="/Homepage" element={
             <ProtectedRoute>
               <AppLayout><StudentDashboard /></AppLayout>
             </ProtectedRoute>
           }
         />
-                
+        {/* //Upload page// */}
+        <Route path="/upload" element={
+  <ProtectedRoute><AppLayout><UploadPage /></AppLayout></ProtectedRoute>
+} />
+
+      {/* Chat page */}
+      <Route path="/chat" element={
+  <ProtectedRoute><AppLayout><ChatPage /></AppLayout></ProtectedRoute>
+} /> 
+{/* Notification page */}
+<Route path="/notifications" element={
+  <ProtectedRoute><AppLayout><NotificationsPage /></AppLayout></ProtectedRoute>
+} />
+{/* Digital NOtes */}
+<Route path="/digital-notes" element={
+          <ProtectedRoute><AppLayout><DigitalNotes /></AppLayout></ProtectedRoute>
+        } />
+       {/* admin page        */}
         <Route
           path="/admin/students"
           element={
@@ -101,6 +125,15 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* Transactions */}
+        <Route path="/transactions" element={
+  <ProtectedRoute><AppLayout><TransactionsPage /></AppLayout></ProtectedRoute>
+} />
+        {/* Setting Page */}
+        <Route path="/settings" element={
+  <ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>
+} />
+
 
         {/* ── Catch-all ── */}
         <Route path="*" element={<Navigate to="/login" replace />} />
