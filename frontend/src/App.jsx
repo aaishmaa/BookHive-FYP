@@ -20,6 +20,8 @@ import TransactionsPage from './Pages/Transactions';
 import SavedPosts from './Pages/SavedPosts';
 import BuyPage from './Pages/Buy';
 import RentPage from './Pages/rent';
+import ExchangePage from './Pages/Exchange';
+import ProfilePage from './Pages/Profile';
 
 
 // ── Full desktop layout ───────────────────────────────────────────────────────
@@ -148,6 +150,18 @@ function App() {
 <Route path="/rent" element={
   <ProtectedRoute><AppLayout><RentPage /></AppLayout></ProtectedRoute>
 } />
+
+{/* Exchange page */}
+
+<Route path="/exchange" element={
+  <ProtectedRoute><AppLayout><ExchangePage /></AppLayout></ProtectedRoute>
+} />
+
+{/* Profile page */}
+<Route path="/profile" element={
+  <ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>
+} />
+
 
 
         {/* ── Catch-all ── */}
