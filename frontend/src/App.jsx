@@ -17,6 +17,9 @@ import NotificationsPage from './Pages/Notification';
 import DigitalNotes from './Pages/Digitalnotes';
 import SettingsPage from './Pages/Setting';
 import TransactionsPage from './Pages/Transactions';
+import SavedPosts from './Pages/SavedPosts';
+import BuyPage from './Pages/Buy';
+import RentPage from './Pages/rent';
 
 
 // ── Full desktop layout ───────────────────────────────────────────────────────
@@ -132,6 +135,18 @@ function App() {
         {/* Setting Page */}
         <Route path="/settings" element={
   <ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>
+} />
+{/* saved post */}
+<Route path="/saved" element={
+  <ProtectedRoute><AppLayout><SavedPosts /></AppLayout></ProtectedRoute>
+} />
+{/* buy page */}
+<Route path="/buy" element={
+  <ProtectedRoute><AppLayout><BuyPage /></AppLayout></ProtectedRoute>
+} />
+{/* rent page */}
+<Route path="/rent" element={
+  <ProtectedRoute><AppLayout><RentPage /></AppLayout></ProtectedRoute>
 } />
 
 
