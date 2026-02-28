@@ -27,7 +27,7 @@ const Navbar = ({ onSearch }) => {
       {/* Logo */}
       <div
         className="flex items-center gap-2 shrink-0 cursor-pointer"
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/home")}
       >
         <div className="w-8 h-8 bg-[#1C7C84] rounded-lg flex items-center justify-center">
           <BookOpen className="w-4 h-4 text-white" />
