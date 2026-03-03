@@ -1,37 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Heart, MessageCircle, Share2, Bookmark,
   ChevronDown, SlidersHorizontal,
   TrendingUp, Star, Clock,
 } from "lucide-react";
+import { useBookStore } from "../store/bookStore";
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-const ALL_BOOKS = [
-  { id: 1,  seller: "Aarav Mehta",   si: "A", time: "2 hours ago",  type: "Sell",     badge: "Good",       title: "Introduction to Algorithms",       author: "by Thomas H. Cormen",       price: "₹450",     likes: 24, comments: 5, img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=700&h=380&fit=crop" },
-  { id: 2,  seller: "Priya Sharma",  si: "P", time: "5 hours ago",  type: "Rent",     badge: "Like New",   title: "Organic Chemistry Morrison & Boyd", author: "by Robert Morrison",        price: "₹150/mo",  likes: 18, comments: 3, img: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=700&h=380&fit=crop" },
-  { id: 3,  seller: "Ravi Kumar",    si: "R", time: "1 day ago",    type: "Exchange", badge: "Fair",       title: "Engineering Mathematics",           author: "by B.S. Grewal",            price: "For Exchange", likes: 9, comments: 2, img: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=700&h=380&fit=crop" },
-  { id: 4,  seller: "Neha Gupta",    si: "N", time: "3 hours ago",  type: "Sell",     badge: "Good",       title: "Business Law for Managers",         author: "by Akhileshwar Pathak",     price: "₹300",     likes: 14, comments: 1, img: "https://images.unsplash.com/photo-1568667256549-094345857637?w=700&h=380&fit=crop" },
-  { id: 5,  seller: "Karan Singh",   si: "K", time: "6 hours ago",  type: "Rent",     badge: "Very Good",  title: "Computer Networks",                 author: "by Andrew Tanenbaum",       price: "₹200/mo",  likes: 21, comments: 4, img: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=700&h=380&fit=crop" },
-  { id: 6,  seller: "Ananya Das",    si: "A", time: "12 hours ago", type: "Exchange", badge: "Acceptable", title: "Microeconomics Theory",             author: "by Hal Varian",             price: "For Exchange", likes: 7, comments: 0, img: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=700&h=380&fit=crop" },
-  { id: 7,  seller: "Meera Nair",    si: "M", time: "4 hours ago",  type: "Sell",     badge: "Like New",   title: "Gray's Anatomy",                    author: "by Henry Gray",             price: "₹850",     likes: 33, comments: 8, img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=700&h=380&fit=crop" },
-  { id: 8,  seller: "Rohan Verma",   si: "R", time: "8 hours ago",  type: "Rent",     badge: "Good",       title: "Machine Learning",                  author: "by Tom Mitchell",           price: "₹180/mo",  likes: 29, comments: 6, img: "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=700&h=380&fit=crop" },
-  { id: 9,  seller: "Divya Reddy",   si: "D", time: "2 days ago",   type: "Exchange", badge: "Fair",       title: "Financial Accounting",              author: "by R.L. Gupta",             price: "For Exchange", likes: 5, comments: 1, img: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=700&h=380&fit=crop" },
-  { id: 10, seller: "Aryan Shah",    si: "A", time: "10 hours ago", type: "Sell",     badge: "Very Good",  title: "Operating System Concepts",         author: "by Silberschatz & Galvin",  price: "₹520",     likes: 16, comments: 2, img: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=700&h=380&fit=crop" },
-  { id: 11, seller: "Sneha Iyer",    si: "S", time: "3 days ago",   type: "Rent",     badge: "Good",       title: "Pharmacology Essentials",           author: "by Rang & Dale",            price: "₹220/mo",  likes: 11, comments: 3, img: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=700&h=380&fit=crop" },
-  { id: 12, seller: "Aditya Kumar",  si: "A", time: "1 day ago",    type: "Sell",     badge: "Like New",   title: "Design Patterns — GoF",             author: "by Gang of Four",           price: "₹670",     likes: 42, comments: 9, img: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=700&h=380&fit=crop" },
-];
-
+// ── kept as fallback for right panel only ─────────────────────────────────────
 const topSellers = [
   { name: "Priya Sharma", rating: "4.9", books: "24 books", initial: "P" },
   { name: "Arjun Patel",  rating: "4.8", books: "18 books", initial: "A" },
   { name: "Sara Khan",    rating: "4.7", books: "15 books", initial: "S" },
-];
-
-const recentUploads = [
-  { title: "Data Structures & Algorithms", time: "2h ago" },
-  { title: "Organic Chemistry Vol. 2",     time: "4h ago" },
-  { title: "Business Law Notes",           time: "6h ago" },
 ];
 
 const TABS = ["All", "Buy", "Rent", "Exchange", "Digital Notes"];
@@ -56,6 +36,19 @@ function BookCard({ book, index }) {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // seller initials from name
+  const initials = book.seller
+    ? book.seller.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "?";
+
+  // relative time from createdAt
+  const timeAgo = (dateStr) => {
+    const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    if (diff < 3600)  return `${Math.floor(diff / 60)} min ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+    return `${Math.floor(diff / 86400)} days ago`;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -66,29 +59,38 @@ function BookCard({ book, index }) {
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-[#D1E8EA] flex items-center justify-center text-[#1C7C84] text-xs font-bold shrink-0">
-            {book.si}
+            {initials}
           </div>
           <div>
             <p className="text-[13.5px] font-semibold text-gray-800 leading-tight">{book.seller}</p>
-            <p className="text-[11.5px] text-gray-400">{book.time}</p>
+            <p className="text-[11.5px] text-gray-400">{timeAgo(book.createdAt)}</p>
           </div>
         </div>
-        <span className={`text-[11.5px] font-medium px-3 py-1 rounded-full ${typeStyle[book.type]}`}>
+        <span className={`text-[11.5px] font-medium px-3 py-1 rounded-full ${typeStyle[book.type] ?? "bg-gray-100 text-gray-500"}`}>
           {book.type}
         </span>
       </div>
 
       <div className="relative w-full h-[220px] overflow-hidden">
-        <img src={book.img} alt={book.title} className="w-full h-full object-cover" />
-        <span className={`absolute top-3 right-3 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full ${badgeBg[book.badge] ?? "bg-gray-600"}`}>
-          {book.badge}
-        </span>
+        <img
+          src={book.img || book.images?.[0] || "https://placehold.co/700x380/1C7C84/white?text=No+Image"}
+          alt={book.title}
+          className="w-full h-full object-cover"
+        />
+        {book.badge && (
+          <span className={`absolute top-3 right-3 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full ${badgeBg[book.badge] ?? "bg-gray-600"}`}>
+            {book.badge}
+          </span>
+        )}
       </div>
 
       <div className="px-4 pt-3 pb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
-            <button onClick={() => setLiked(!liked)} className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 transition">
+            <button
+              onClick={() => setLiked(!liked)}
+              className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 transition"
+            >
               <Heart className={`w-[17px] h-[17px] ${liked ? "fill-red-500 text-red-500" : ""}`} />
               <span className="text-[12.5px] text-gray-500">{liked ? book.likes + 1 : book.likes}</span>
             </button>
@@ -120,15 +122,29 @@ function BookCard({ book, index }) {
 }
 
 // ─── Home Page ────────────────────────────────────────────────────────────────
-// NOTE: No Navbar or Sidebar here — AppLayout in App.jsx provides those
 const Home = () => {
   const [activeTab, setActiveTab] = useState("All");
+  const { books, isLoading, fetchBooks } = useBookStore();
 
-  const filtered = ALL_BOOKS.filter((b) =>
-    activeTab === "All"   ? true :
-    activeTab === "Buy"   ? b.type === "Sell" :
-    b.type === activeTab
-  );
+  // Fetch books whenever tab changes
+  useEffect(() => {
+    const typeMap = {
+      "All":           "all",
+      "Buy":           "Sell",
+      "Rent":          "Rent",
+      "Exchange":      "Exchange",
+      "Digital Notes": "Exchange",
+    };
+    fetchBooks(typeMap[activeTab] || "all");
+  }, [activeTab]);
+
+  // Use recent books for right panel "Recent Uploads"
+  const recentUploads = books.slice(0, 3).map((b) => ({
+    title: b.title,
+    time: b.createdAt
+      ? `${Math.floor((Date.now() - new Date(b.createdAt)) / 3600000)}h ago`
+      : "recently",
+  }));
 
   return (
     <div className="flex h-full overflow-hidden bg-gray-50">
@@ -170,9 +186,21 @@ const Home = () => {
 
         {/* Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 pb-8">
-          {filtered.map((book, i) => (
-            <BookCard key={book.id} book={book} index={i} />
-          ))}
+          {isLoading ? (
+            // Loading spinner
+            <div className="col-span-3 flex justify-center py-16">
+              <div className="w-8 h-8 border-4 border-[#1C7C84] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : books.length === 0 ? (
+            // Empty state
+            <div className="col-span-3 text-center py-16">
+              <p className="text-gray-400 text-sm">No books found. Be the first to post!</p>
+            </div>
+          ) : (
+            books.map((book, i) => (
+              <BookCard key={book._id} book={book} index={i} />
+            ))
+          )}
         </div>
       </div>
 
@@ -204,7 +232,9 @@ const Home = () => {
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-gray-800 leading-tight">{s.name}</p>
-                <p className="text-[11.5px] text-gray-400 mt-0.5"><span className="text-amber-400">★</span> {s.rating} · {s.books}</p>
+                <p className="text-[11.5px] text-gray-400 mt-0.5">
+                  <span className="text-amber-400">★</span> {s.rating} · {s.books}
+                </p>
               </div>
             </div>
           ))}
@@ -215,12 +245,16 @@ const Home = () => {
             <Clock className="w-4 h-4 text-gray-400" />
             <h3 className="text-[13px] font-bold text-gray-800">Recent Uploads</h3>
           </div>
-          {recentUploads.map((u) => (
-            <div key={u.title} className="mb-3.5 last:mb-0">
-              <p className="text-[13px] font-semibold text-gray-800 leading-tight">{u.title}</p>
-              <p className="text-[11.5px] text-gray-400 mt-0.5">{u.time}</p>
-            </div>
-          ))}
+          {recentUploads.length === 0 ? (
+            <p className="text-[12px] text-gray-400">No recent uploads yet</p>
+          ) : (
+            recentUploads.map((u) => (
+              <div key={u.title} className="mb-3.5 last:mb-0">
+                <p className="text-[13px] font-semibold text-gray-800 leading-tight">{u.title}</p>
+                <p className="text-[11.5px] text-gray-400 mt-0.5">{u.time}</p>
+              </div>
+            ))
+          )}
         </div>
       </aside>
     </div>

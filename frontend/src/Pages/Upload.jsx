@@ -1,28 +1,38 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Upload, X, ImagePlus, BookOpen, Tag, AlignLeft, DollarSign, ChevronDown } from "lucide-react";
+import {
+  Upload, X, ImagePlus, BookOpen, Tag,
+  ChevronDown, Loader
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useBookStore } from "../store/bookStore";
 
+// ── Constants ─────────────────────────────────────────────────────────────────
 const categories = [
   "Engineering", "Medical", "Management", "Law", "IT",
   "Science", "History", "Fiction", "Self-Help", "Productivity", "Technology", "Other"
 ];
-
-const conditions = ["Like New", "Very Good", "Good", "Fair", "Acceptable"];
-
+const conditions   = ["Like New", "Very Good", "Good", "Fair", "Acceptable"];
 const LISTING_TYPES = ["Sell", "Rent", "Exchange", "PDF Notes"];
 
+// ── Component ─────────────────────────────────────────────────────────────────
 const UploadPage = () => {
-  const [images, setImages]           = useState([]);
-  const [listingType, setListingType] = useState("Sell");
-  const [title, setTitle]             = useState("");
-  const [author, setAuthor]           = useState("");
-  const [category, setCategory]       = useState("");
-  const [condition, setCondition]     = useState("");
-  const [price, setPrice]             = useState("");
-  const [description, setDescription] = useState("");
-  const [dragging, setDragging]       = useState(false);
-  const fileRef = useRef();
+  const navigate  = useNavigate();
+  const fileRef   = useRef();
+  const { createBook, isLoading, error, clearError } = useBookStore();
 
+  const [images,      setImages]      = useState([]);
+  const [listingType, setListingType] = useState("Sell");
+  const [title,       setTitle]       = useState("");
+  const [author,      setAuthor]      = useState("");
+  const [category,    setCategory]    = useState("");
+  const [condition,   setCondition]   = useState("");
+  const [price,       setPrice]       = useState("");
+  const [description, setDescription] = useState("");
+  const [dragging,    setDragging]    = useState(false);
+  const [formError,   setFormError]   = useState("");
+
+  // ── Image handlers ──────────────────────────────────────────────────────────
   const handleFiles = (files) => {
     const valid = Array.from(files)
       .filter(f => f.size <= 5 * 1024 * 1024 && f.type.startsWith("image/"))
@@ -41,12 +51,66 @@ const UploadPage = () => {
     handleFiles(e.dataTransfer.files);
   };
 
-  const handleSubmit = (e) => {
+  // ── Submit ──────────────────────────────────────────────────────────────────
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log({ listingType, title, author, category, condition, price, description, images });
-    alert("Listing posted successfully!");
+    setFormError("");
+    clearError();
+
+    // Frontend validation
+    if (images.length === 0) {
+      setFormError("Please upload at least one image.");
+      return;
+    }
+    if (!title.trim()) {
+      setFormError("Book title is required.");
+      return;
+    }
+    if (!category) {
+      setFormError("Please select a category.");
+      return;
+    }
+    if (!condition) {
+      setFormError("Please select a condition.");
+      return;
+    }
+    if ((listingType === "Sell" || listingType === "Rent") && !price) {
+      setFormError("Please enter a price.");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+
+      // Text fields
+      formData.append("title",       title.trim());
+      formData.append("author",      author.trim());
+      formData.append("category",    category);
+      formData.append("badge",       condition);   // condition → badge in DB
+      formData.append("description", description.trim());
+
+      // Listing type — map "PDF Notes" → "Exchange" for DB enum
+      const dbType = listingType === "PDF Notes" ? "Exchange" : listingType;
+      formData.append("type", dbType);
+
+      // Price — format based on type
+      let finalPrice = "For Exchange";
+      if (listingType === "Sell")  finalPrice = `₹${price}`;
+      if (listingType === "Rent")  finalPrice = `₹${price}/mo`;
+      formData.append("price", finalPrice);
+
+      // Append all image files — key must match upload.array('images') in route
+      images.forEach(img => formData.append("images", img.file));
+
+      await createBook(formData);
+      navigate("/home"); // back to feed after posting
+    } catch (err) {
+      // error is already set in the store
+      console.error("Upload failed:", err);
+    }
   };
 
+  // ── JSX ─────────────────────────────────────────────────────────────────────
   return (
     <div className="h-full overflow-y-auto bg-gray-50 font-sans">
       <div className="max-w-3xl mx-auto px-6 py-8">
@@ -73,7 +137,7 @@ const UploadPage = () => {
             {/* ── Image Upload ── */}
             <div className="p-6 border-b border-gray-100">
               <label className="block text-[13.5px] font-semibold text-gray-700 mb-3">
-                Images
+                Images <span className="text-red-500">*</span>
               </label>
 
               {/* Drop zone */}
@@ -91,9 +155,10 @@ const UploadPage = () => {
                   <Upload className="w-5 h-5 text-gray-400" />
                 </div>
                 <p className="text-[13.5px] font-medium text-gray-600">
-                  Drag & drop images here, or <span className="text-[#1C7C84] font-semibold">click to browse</span>
+                  Drag & drop images here, or{" "}
+                  <span className="text-[#1C7C84] font-semibold">click to browse</span>
                 </p>
-                <p className="text-[12px] text-gray-400 mt-1">PNG, JPG up to 5MB each</p>
+                <p className="text-[12px] text-gray-400 mt-1">PNG, JPG up to 5MB each · Max 5 images</p>
                 <input
                   ref={fileRef}
                   type="file"
@@ -110,6 +175,11 @@ const UploadPage = () => {
                   {images.map((img, i) => (
                     <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group">
                       <img src={img.url} alt="" className="w-full h-full object-cover" />
+                      {i === 0 && (
+                        <span className="absolute bottom-0 left-0 right-0 bg-[#1C7C84]/80 text-white text-[9px] text-center py-0.5">
+                          Main
+                        </span>
+                      )}
                       <button
                         type="button"
                         onClick={() => removeImage(i)}
@@ -135,14 +205,14 @@ const UploadPage = () => {
             {/* ── Listing Type ── */}
             <div className="p-6 border-b border-gray-100">
               <label className="block text-[13.5px] font-semibold text-gray-700 mb-3">
-                Listing Type
+                Listing Type <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-2 flex-wrap">
                 {LISTING_TYPES.map((type) => (
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setListingType(type)}
+                    onClick={() => { setListingType(type); setPrice(""); }}
                     className={`px-5 py-2 rounded-lg text-[13px] font-semibold transition border
                       ${listingType === type
                         ? "bg-[#1C7C84] text-white border-[#1C7C84]"
@@ -159,7 +229,7 @@ const UploadPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
-                    Book Title
+                    Book Title <span className="text-red-500">*</span>
                   </label>
                   <div className="flex items-center border border-gray-200 rounded-lg px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white">
                     <BookOpen className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
@@ -169,7 +239,6 @@ const UploadPage = () => {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       className="w-full outline-none text-[13px] text-gray-700 placeholder:text-gray-400 bg-transparent"
-                      required
                     />
                   </div>
                 </div>
@@ -196,7 +265,7 @@ const UploadPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
-                    Category
+                    Category <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <select
@@ -212,7 +281,7 @@ const UploadPage = () => {
                 </div>
                 <div>
                   <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
-                    Condition
+                    Condition <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <select
@@ -229,11 +298,14 @@ const UploadPage = () => {
               </div>
             </div>
 
-            {/* ── Price ── */}
+            {/* ── Price (hidden for Exchange / PDF Notes) ── */}
             {listingType !== "Exchange" && listingType !== "PDF Notes" && (
               <div className="p-6 border-b border-gray-100">
                 <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
-                  Price {listingType === "Rent" && <span className="text-gray-400 font-normal">(per month)</span>}
+                  Price <span className="text-red-500">*</span>{" "}
+                  {listingType === "Rent" && (
+                    <span className="text-gray-400 font-normal">(per month)</span>
+                  )}
                 </label>
                 <div className="flex items-center border border-gray-200 rounded-lg px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white w-1/2">
                   <span className="text-gray-500 mr-1.5 text-[13px] font-medium">₹</span>
@@ -265,16 +337,33 @@ const UploadPage = () => {
               </div>
             </div>
 
-            {/* ── Submit ── */}
-            <div className="p-6">
+            {/* ── Errors + Submit ── */}
+            <div className="p-6 space-y-4">
+              {/* Frontend validation error */}
+              {formError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                  <p className="text-red-600 text-sm font-medium">{formError}</p>
+                </div>
+              )}
+              {/* Backend error from store */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                  <p className="text-red-600 text-sm font-medium">{error}</p>
+                </div>
+              )}
+
               <motion.button
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 type="submit"
-                className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl text-[14px] transition flex items-center justify-center gap-2"
+                disabled={isLoading}
+                className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl text-[14px] transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Upload className="w-4 h-4" />
-                Post Listing
+                {isLoading ? (
+                  <><Loader className="w-4 h-4 animate-spin" /> Posting...</>
+                ) : (
+                  <><Upload className="w-4 h-4" /> Post Listing</>
+                )}
               </motion.button>
             </div>
 
