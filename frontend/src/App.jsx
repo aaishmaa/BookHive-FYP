@@ -22,6 +22,8 @@ import BuyPage from './Pages/Buy';
 import RentPage from './Pages/rent';
 import ExchangePage from './Pages/Exchange';
 import ProfilePage from './Pages/Profile';
+import BookDetailPage from "./Pages/BookDetailPage";
+
 
 
 // ── Full desktop layout ───────────────────────────────────────────────────────
@@ -160,6 +162,10 @@ function App() {
 {/* Profile page */}
 <Route path="/profile" element={
   <ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>
+} />
+{/* BookDetail Page */}
+<Route path="/book/:id" element={
+  <ProtectedRoute><AppLayout><BookDetailPage /></AppLayout></ProtectedRoute>
 } />
 
 
