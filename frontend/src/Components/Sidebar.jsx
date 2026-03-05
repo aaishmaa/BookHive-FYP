@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { label: "Home",          icon: Home,           path: "/" },
+  { label: "Home",          icon: Home,           path: "/home" },
   { label: "Buy",           icon: ShoppingCart,   path: "/buy" },
   { label: "Rent",          icon: RotateCcw,      path: "/rent" },
   { label: "Exchange",      icon: ArrowLeftRight, path: "/exchange" },
