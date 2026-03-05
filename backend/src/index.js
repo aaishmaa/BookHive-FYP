@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import dbConnect from './Config/dbConnect.js';
+import { dbConnect } from './Config/dbConnect.js';
+import notesRoutes from './Routes/notes.route.js';
+import path from 'path';
 
 import authRoutes from './Routes/auth.route.js';
 import studentRoutes from './Routes/studentProfile.route.js';
@@ -26,6 +28,8 @@ app.use(cookieParser());
 app.use('/auth', authRoutes);
 app.use('/student', studentRoutes);
 app.use('/books', bookRoutes);
+app.use('/notes', notesRoutes);
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Test Route
 app.get('/', (req, res) => {
@@ -50,3 +54,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
