@@ -4,8 +4,15 @@ import { User } from '../models/user.model.js';
 export const getBooks = async (req, res) => {
   try {
     const { type } = req.query;
-    const filter = type && type !== 'all' ? { type } : {};
+    console.log("TYPE FILTER:", type);
+
+    // Case-insensitive match — handles "Sell", "sell", "SELL" etc
+    const filter = type && type !== 'all'
+      ? { type: { $regex: new RegExp(`^${type}$`, 'i') } }
+      : {};
+
     const books = await Book.find(filter).sort({ createdAt: -1 });
+    console.log("BOOKS FOUND:", books.length);
     res.status(200).json({ success: true, books });
   } catch (error) {
     console.log("GET BOOKS ERROR:", error);
