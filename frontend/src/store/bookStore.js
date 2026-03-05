@@ -10,7 +10,7 @@ axios.defaults.withCredentials = true;
 
 export const useBookStore = create((set) => ({
   books: [],
-  currentBook: null,       // ← ADD
+  currentBook: null,
   isLoading: false,
   error: null,
 
@@ -24,7 +24,7 @@ export const useBookStore = create((set) => ({
     }
   },
 
-  fetchBookById: async (id) => {       // ← ADD THIS WHOLE FUNCTION
+  fetchBookById: async (id) => {
     set({ isLoading: true, error: null, currentBook: null });
     try {
       const response = await axios.get(`${API_URL}/${id}`);
