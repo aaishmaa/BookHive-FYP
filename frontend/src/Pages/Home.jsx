@@ -5,9 +5,9 @@ import {
   ChevronDown, SlidersHorizontal,
   TrendingUp, Star, Clock,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useBookStore } from "../store/bookStore";
 
-// ── kept as fallback for right panel only ─────────────────────────────────────
 const topSellers = [
   { name: "Priya Sharma", rating: "4.9", books: "24 books", initial: "P" },
   { name: "Arjun Patel",  rating: "4.8", books: "18 books", initial: "A" },
@@ -33,15 +33,14 @@ const badgeBg = {
 
 // ─── BookCard ─────────────────────────────────────────────────────────────────
 function BookCard({ book, index }) {
+  const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // seller initials from name
   const initials = book.seller
     ? book.seller.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
     : "?";
 
-  // relative time from createdAt
   const timeAgo = (dateStr) => {
     const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
     if (diff < 3600)  return `${Math.floor(diff / 60)} min ago`;
@@ -54,7 +53,7 @@ function BookCard({ book, index }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.04 }}
-      className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer"
+      className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
     >
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div className="flex items-center gap-2.5">
@@ -71,11 +70,15 @@ function BookCard({ book, index }) {
         </span>
       </div>
 
-      <div className="relative w-full h-[220px] overflow-hidden">
+      {/* Clickable image area */}
+      <div
+        className="relative w-full h-[220px] overflow-hidden cursor-pointer"
+        onClick={() => navigate(`/book/${book._id}`)}
+      >
         <img
           src={book.img || book.images?.[0] || "https://placehold.co/700x380/1C7C84/white?text=No+Image"}
           alt={book.title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
         />
         {book.badge && (
           <span className={`absolute top-3 right-3 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full ${badgeBg[book.badge] ?? "bg-gray-600"}`}>
@@ -107,12 +110,21 @@ function BookCard({ book, index }) {
           </button>
         </div>
 
-        <h3 className="text-[14.5px] font-bold text-gray-900 leading-snug mb-0.5">{book.title}</h3>
+        {/* Clickable title */}
+        <h3
+          className="text-[14.5px] font-bold text-gray-900 leading-snug mb-0.5 cursor-pointer hover:text-[#1C7C84] transition"
+          onClick={() => navigate(`/book/${book._id}`)}
+        >
+          {book.title}
+        </h3>
         <p className="text-[12px] text-gray-400 mb-3">{book.author}</p>
 
         <div className="flex items-center justify-between">
           <span className="text-[18px] font-extrabold text-[#1C7C84]">{book.price}</span>
-          <button className="flex items-center gap-1.5 bg-[#1C7C84] hover:bg-[#155f65] text-white text-[12.5px] font-semibold px-4 py-2 rounded-lg transition">
+          <button
+            onClick={() => navigate(`/book/${book._id}`)}
+            className="flex items-center gap-1.5 bg-[#1C7C84] hover:bg-[#155f65] text-white text-[12.5px] font-semibold px-4 py-2 rounded-lg transition"
+          >
             ⊕ View Details
           </button>
         </div>
@@ -126,7 +138,6 @@ const Home = () => {
   const [activeTab, setActiveTab] = useState("All");
   const { books, isLoading, fetchBooks } = useBookStore();
 
-  // Fetch books whenever tab changes
   useEffect(() => {
     const typeMap = {
       "All":           "all",
@@ -138,7 +149,6 @@ const Home = () => {
     fetchBooks(typeMap[activeTab] || "all");
   }, [activeTab]);
 
-  // Use recent books for right panel "Recent Uploads"
   const recentUploads = books.slice(0, 3).map((b) => ({
     title: b.title,
     time: b.createdAt
@@ -187,12 +197,10 @@ const Home = () => {
         {/* Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 pb-8">
           {isLoading ? (
-            // Loading spinner
             <div className="col-span-3 flex justify-center py-16">
               <div className="w-8 h-8 border-4 border-[#1C7C84] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : books.length === 0 ? (
-            // Empty state
             <div className="col-span-3 text-center py-16">
               <p className="text-gray-400 text-sm">No books found. Be the first to post!</p>
             </div>
