@@ -1,30 +1,42 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import './App.css';
+
+// Layout
 import Navbar from './Components/Navbar';
 import Sidebar from './Components/Sidebar';
-import Login from './Pages/Login';
-import Register from './Pages/Register';
-import Home from './Pages/Home';
-import StudentDashboard from './student/StudentDashboard';
+
+// Auth pages
+import Login                from './Pages/Login';
+import Register             from './Pages/Register';
 import EmailVerificationPage from './Pages/EmailVerification';
-import StudentForm from './student/StudentForm';
-import AdminStudentReview from './admin/Adminstudentreview';
+import StudentForm          from './student/StudentForm';
+
+// App pages
+import Home                 from './Pages/Home';
+import StudentDashboard     from './student/StudentDashboard';
+import UploadPage           from './Pages/Upload';
+import ChatPage             from './Pages/Chat';
+import NotificationsPage    from './Pages/Notification';
+import DigitalNotes         from './Pages/Digitalnotes';
+import SettingsPage         from './Pages/Setting';
+import TransactionsPage     from './Pages/Transactions';
+import SavedPosts           from './Pages/SavedPosts';
+import BuyPage              from './Pages/Buy';
+import RentPage             from './Pages/rent';
+import ExchangePage         from './Pages/Exchange';
+import ProfilePage          from './Pages/Profile';
+import BookDetailPage       from './Pages/BookDetailPage';
+import AdminStudentReview   from './admin/Adminstudentreview';
+
+// New sidebar pages
+import BrowsePage           from './Pages/Browse';
+import MyListings           from './Pages/MyListings';
+import Requests             from './Pages/Requests';
+import Wishlist             from './Pages/Wishlist';
+
+// Auth store
 import { useAuthStore } from './store/authStore';
-import UploadPage from './Pages/Upload';
-import ChatPage from './Pages/Chat';
-import NotificationsPage from './Pages/Notification';
-import DigitalNotes from './Pages/Digitalnotes';
-import SettingsPage from './Pages/Setting';
-import TransactionsPage from './Pages/Transactions';
-import SavedPosts from './Pages/SavedPosts';
-import BuyPage from './Pages/Buy';
-import RentPage from './Pages/rent';
-import ExchangePage from './Pages/Exchange';
-import ProfilePage from './Pages/Profile';
-import BookDetailPage from "./Pages/BookDetailPage";
-
-
 
 // ── Full desktop layout ───────────────────────────────────────────────────────
 function AppLayout({ children }) {
@@ -41,11 +53,10 @@ function AppLayout({ children }) {
   );
 }
 
-// ── Protected route — redirects to /login if not authenticated ────────────────
+// ── Protected route ───────────────────────────────────────────────────────────
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isCheckingAuth } = useAuthStore();
 
-  // Still checking auth (page just loaded) — show nothing yet
   if (isCheckingAuth) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#F4FAFA]">
@@ -57,29 +68,25 @@ function ProtectedRoute({ children }) {
     );
   }
 
-  // Not authenticated — go to login
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Authenticated — render the page
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return children;
 }
+
+const P = ({ children }) => (
+  <ProtectedRoute><AppLayout>{children}</AppLayout></ProtectedRoute>
+);
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
   const { checkAuth } = useAuthStore();
 
-  // Check if user is still logged in when app loads
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  useEffect(() => { checkAuth(); }, [checkAuth]);
 
   return (
     <div className="App">
       <Routes>
 
-        {/* ── Public pages (no layout, no auth needed) ── */}
+        {/* ── Public ── */}
         <Route path="/"             element={<Navigate to="/login" replace />} />
         <Route path="/login"        element={<Login />} />
         <Route path="/Login"        element={<Login />} />
@@ -87,88 +94,27 @@ function App() {
         <Route path="/Register"     element={<Register />} />
         <Route path="/verify-email" element={<EmailVerificationPage />} />
         <Route path="/form-page"    element={<StudentForm />} />
-       
-        {/* ── Protected pages (must be logged in) ── */}
-        {/* homepage */}
-        <Route
-          path="/home"
-          element={
-            <ProtectedRoute>
-              <AppLayout><Home /></AppLayout>
-            </ProtectedRoute>
-          }
-        />
-        {/* student homepage */}
-        <Route
-          path="/Homepage" element={
-            <ProtectedRoute>
-              <AppLayout><StudentDashboard /></AppLayout>
-            </ProtectedRoute>
-          }
-        />
-        {/* //Upload page// */}
-        <Route path="/upload" element={
-  <ProtectedRoute><AppLayout><UploadPage /></AppLayout></ProtectedRoute>
-} />
 
-      {/* Chat page */}
-      <Route path="/chat" element={
-  <ProtectedRoute><AppLayout><ChatPage /></AppLayout></ProtectedRoute>
-} /> 
-{/* Notification page */}
-<Route path="/notifications" element={
-  <ProtectedRoute><AppLayout><NotificationsPage /></AppLayout></ProtectedRoute>
-} />
-{/* Digital NOtes */}
-<Route path="/digital-notes" element={
-          <ProtectedRoute><AppLayout><DigitalNotes /></AppLayout></ProtectedRoute>
-        } />
-       {/* admin page        */}
-        <Route
-          path="/admin/students"
-          element={
-            <ProtectedRoute>
-              <AppLayout><AdminStudentReview /></AppLayout>
-            </ProtectedRoute>
-          }
-        />
-        {/* Transactions */}
-        <Route path="/transactions" element={
-  <ProtectedRoute><AppLayout><TransactionsPage /></AppLayout></ProtectedRoute>
-} />
-        {/* Setting Page */}
-        <Route path="/settings" element={
-  <ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>
-} />
-{/* saved post */}
-<Route path="/saved" element={
-  <ProtectedRoute><AppLayout><SavedPosts /></AppLayout></ProtectedRoute>
-} />
-{/* buy page */}
-<Route path="/buy" element={
-  <ProtectedRoute><AppLayout><BuyPage /></AppLayout></ProtectedRoute>
-} />
-{/* rent page */}
-<Route path="/rent" element={
-  <ProtectedRoute><AppLayout><RentPage /></AppLayout></ProtectedRoute>
-} />
-
-{/* Exchange page */}
-
-<Route path="/exchange" element={
-  <ProtectedRoute><AppLayout><ExchangePage /></AppLayout></ProtectedRoute>
-} />
-
-{/* Profile page */}
-<Route path="/profile" element={
-  <ProtectedRoute><AppLayout><ProfilePage /></AppLayout></ProtectedRoute>
-} />
-{/* BookDetail Page */}
-<Route path="/book/:id" element={
-  <ProtectedRoute><AppLayout><BookDetailPage /></AppLayout></ProtectedRoute>
-} />
-
-
+        {/* ── Protected ── */}
+        <Route path="/home"          element={<P><Home /></P>} />
+        <Route path="/Homepage"      element={<P><StudentDashboard /></P>} />
+        <Route path="/browse"        element={<P><BrowsePage /></P>} />
+        <Route path="/my-listings"   element={<P><MyListings /></P>} />
+        <Route path="/requests"      element={<P><Requests /></P>} />
+        <Route path="/wishlist"      element={<P><Wishlist /></P>} />
+        <Route path="/upload"        element={<P><UploadPage /></P>} />
+        <Route path="/chat"          element={<P><ChatPage /></P>} />
+        <Route path="/notifications" element={<P><NotificationsPage /></P>} />
+        <Route path="/digital-notes" element={<P><DigitalNotes /></P>} />
+        <Route path="/transactions"  element={<P><TransactionsPage /></P>} />
+        <Route path="/settings"      element={<P><SettingsPage /></P>} />
+        <Route path="/saved"         element={<P><SavedPosts /></P>} />
+        <Route path="/buy"           element={<P><BuyPage /></P>} />
+        <Route path="/rent"          element={<P><RentPage /></P>} />
+        <Route path="/exchange"      element={<P><ExchangePage /></P>} />
+        <Route path="/profile"       element={<P><ProfilePage /></P>} />
+        <Route path="/book/:id"      element={<P><BookDetailPage /></P>} />
+        <Route path="/admin/students" element={<P><AdminStudentReview /></P>} />
 
         {/* ── Catch-all ── */}
         <Route path="*" element={<Navigate to="/login" replace />} />
