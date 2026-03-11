@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Heart, MessageCircle, Share2, Bookmark,
-  ChevronDown, SlidersHorizontal,
+  ChevronDown, SlidersHorizontal, Search,
   TrendingUp, Star, Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +15,7 @@ const topSellers = [
 ];
 
 const TABS = ["All", "Buy", "Rent", "Exchange", "Digital Notes"];
+const CATEGORIES = ["All", "Engineering", "Medical", "Management", "Law", "IT", "Science", "History", "Fiction", "Other"];
 
 const typeStyle = {
   Sell:     "bg-[#EEF2FF] text-indigo-500",
@@ -27,11 +28,9 @@ const badgeBg = {
   "Very Good": "bg-blue-600",
   Good:        "bg-gray-700",
   Fair:        "bg-amber-600",
-  Used:        "bg-orange-700",
   Acceptable:  "bg-slate-600",
 };
 
-// ─── BookCard ─────────────────────────────────────────────────────────────────
 function BookCard({ book, index }) {
   const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
@@ -70,11 +69,7 @@ function BookCard({ book, index }) {
         </span>
       </div>
 
-      {/* Clickable image area */}
-      <div
-        className="relative w-full h-[220px] overflow-hidden cursor-pointer"
-        onClick={() => navigate(`/book/${book._id}`)}
-      >
+      <div className="relative w-full h-[220px] overflow-hidden cursor-pointer" onClick={() => navigate(`/book/${book._id}`)}>
         <img
           src={book.img || book.images?.[0] || "https://placehold.co/700x380/1C7C84/white?text=No+Image"}
           alt={book.title}
@@ -90,10 +85,7 @@ function BookCard({ book, index }) {
       <div className="px-4 pt-3 pb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setLiked(!liked)}
-              className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 transition"
-            >
+            <button onClick={() => setLiked(!liked)} className="flex items-center gap-1.5 text-gray-400 hover:text-red-500 transition">
               <Heart className={`w-[17px] h-[17px] ${liked ? "fill-red-500 text-red-500" : ""}`} />
               <span className="text-[12.5px] text-gray-500">{liked ? book.likes + 1 : book.likes}</span>
             </button>
@@ -110,7 +102,6 @@ function BookCard({ book, index }) {
           </button>
         </div>
 
-        {/* Clickable title */}
         <h3
           className="text-[14.5px] font-bold text-gray-900 leading-snug mb-0.5 cursor-pointer hover:text-[#1C7C84] transition"
           onClick={() => navigate(`/book/${book._id}`)}
@@ -133,21 +124,53 @@ function BookCard({ book, index }) {
   );
 }
 
+function CategoryDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3.5 py-2 text-[13px] text-gray-600 hover:border-[#1C7C84] transition min-w-[150px]"
+      >
+        <span className="flex-1 text-left">{value === "all" ? "All Categories" : value}</span>
+        <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[170px] py-1">
+          {CATEGORIES.map(c => (
+            <button
+              key={c}
+              onClick={() => { onChange(c === "All" ? "all" : c); setOpen(false); }}
+              className={`w-full text-left px-4 py-2 text-[13px] hover:bg-[#1C7C84]/5 transition
+                ${(c === "All" ? "all" : c) === value ? "text-[#1C7C84] font-semibold" : "text-gray-700"}`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Home Page ────────────────────────────────────────────────────────────────
 const Home = () => {
+  const navigate  = useNavigate();   // ← FIXED
   const [activeTab, setActiveTab] = useState("All");
+  const [category,  setCategory]  = useState("all");
+
   const { books, isLoading, fetchBooks } = useBookStore();
 
+  const typeMap = {
+    "All":      "all",
+    "Buy":      "Sell",
+    "Rent":     "Rent",
+    "Exchange": "Exchange",
+  };
+
   useEffect(() => {
-    const typeMap = {
-      "All":           "all",
-      "Buy":           "Sell",
-      "Rent":          "Rent",
-      "Exchange":      "Exchange",
-      "Digital Notes": "Exchange",
-    };
-    fetchBooks(typeMap[activeTab] || "all");
-  }, [activeTab]);
+    fetchBooks(typeMap[activeTab] || "all", "", category);
+  }, [activeTab, category]);
 
   const recentUploads = books.slice(0, 3).map((b) => ({
     title: b.title,
@@ -158,8 +181,6 @@ const Home = () => {
 
   return (
     <div className="flex h-full overflow-hidden bg-gray-50">
-
-      {/* ── Feed ── */}
       <div className="flex-1 overflow-y-auto px-6 py-5">
 
         {/* Tabs */}
@@ -167,7 +188,13 @@ const Home = () => {
           {TABS.map((t) => (
             <button
               key={t}
-              onClick={() => setActiveTab(t)}
+              onClick={() => {
+                if (t === "Digital Notes") {
+                  navigate("/digital-notes");  // ← FIXED
+                  return;
+                }
+                setActiveTab(t);
+              }}
               className={`px-5 py-2 rounded-full text-[13.5px] font-medium border transition
                 ${activeTab === t
                   ? "bg-[#1C7C84] text-white border-[#1C7C84]"
@@ -180,10 +207,7 @@ const Home = () => {
 
         {/* Filters */}
         <div className="flex items-center gap-3 mb-6 flex-wrap">
-          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3.5 py-2 text-[13px] text-gray-600 cursor-pointer hover:border-[#1C7C84] transition min-w-[150px]">
-            <span className="flex-1">All Categories</span>
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          </div>
+          <CategoryDropdown value={category} onChange={setCategory} />
           <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3.5 py-2 text-[13px] text-gray-600 cursor-pointer hover:border-[#1C7C84] transition min-w-[130px]">
             <span className="flex-1">Newest</span>
             <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -192,7 +216,22 @@ const Home = () => {
             <SlidersHorizontal className="w-4 h-4" />
             Filters
           </button>
+          {category !== "all" && (
+            <button
+              onClick={() => setCategory("all")}
+              className="text-[12px] text-red-400 hover:text-red-600 font-medium transition"
+            >
+              Clear filters ×
+            </button>
+          )}
         </div>
+
+        {/* Results count */}
+        {!isLoading && (
+          <p className="text-[12.5px] text-gray-400 mb-3 font-medium">
+            {books.length} book{books.length !== 1 ? "s" : ""} found
+          </p>
+        )}
 
         {/* Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 pb-8">
@@ -202,7 +241,8 @@ const Home = () => {
             </div>
           ) : books.length === 0 ? (
             <div className="col-span-3 text-center py-16">
-              <p className="text-gray-400 text-sm">No books found. Be the first to post!</p>
+              <Search className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+              <p className="text-gray-400 text-sm font-medium">No books found. Be the first to post!</p>
             </div>
           ) : (
             books.map((book, i) => (
@@ -221,7 +261,14 @@ const Home = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             {["Engineering", "Medical", "Management", "IT", "Law"].map((c) => (
-              <span key={c} className="px-3 py-1 bg-gray-100 text-gray-600 text-[12px] font-medium rounded-full cursor-pointer hover:bg-[#1C7C84]/10 hover:text-[#1C7C84] transition">
+              <span
+                key={c}
+                onClick={() => setCategory(category === c ? "all" : c)}
+                className={`px-3 py-1 text-[12px] font-medium rounded-full cursor-pointer transition
+                  ${category === c
+                    ? "bg-[#1C7C84] text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-[#1C7C84]/10 hover:text-[#1C7C84]"}`}
+              >
                 {c}
               </span>
             ))}
