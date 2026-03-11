@@ -1,66 +1,88 @@
 import { Book } from '../models/book.model.js';
-import { User } from '../models/user.model.js';
 
+// ── GET /books — all books (with optional filters) ────────────────────────────
 export const getBooks = async (req, res) => {
   try {
-    const { type } = req.query;
-    console.log("TYPE FILTER:", type);
+    const { type, search, category } = req.query;
+    const query = {};
 
-    // Case-insensitive match — handles "Sell", "sell", "SELL" etc
-    const filter = type && type !== 'all'
-      ? { type: { $regex: new RegExp(`^${type}$`, 'i') } }
-      : {};
+    if (type)     query.type     = type;
+    if (category) query.category = category;
+    if (search) {
+      query.$or = [
+        { title:  { $regex: search, $options: 'i' } },
+        { author: { $regex: search, $options: 'i' } },
+        { seller: { $regex: search, $options: 'i' } },
+      ];
+    }
 
-    const books = await Book.find(filter).sort({ createdAt: -1 });
-    console.log("BOOKS FOUND:", books.length);
-    res.status(200).json({ success: true, books });
-  } catch (error) {
-    console.log("GET BOOKS ERROR:", error);
-    res.status(500).json({ success: false, message: error.message });
+    const books = await Book.find(query).sort({ createdAt: -1 });
+    res.json({ books });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
+// ── GET /books/my — only the logged-in user's books ───────────────────────────
+export const getMyBooks = async (req, res) => {
+  try {
+    const books = await Book.find({ userId: req.userId }).sort({ createdAt: -1 });
+    res.json({ books });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// ── GET /books/:id — single book ──────────────────────────────────────────────
 export const getBookById = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
-    if (!book) {
-      return res.status(404).json({ success: false, msg: 'Book not found' });
-    }
-    res.status(200).json({ success: true, book });
-  } catch (error) {
-    console.log("GET BOOK BY ID ERROR:", error);
-    res.status(500).json({ success: false, message: error.message });
+    if (!book) return res.status(404).json({ msg: 'Book not found' });
+    res.json({ book });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
+// ── POST /books — create a new listing ───────────────────────────────────────
 export const createBook = async (req, res) => {
   try {
-    const { title, author, category, badge, type, price, description } = req.body;
+    const { title, author, category, price, type, badge, description, seller } = req.body;
 
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ success: false, message: "At least one image is required" });
-    }
+    // Cloudinary URLs come from multer/cloudinary middleware as req.files
+    const images = req.files?.map(f => f.path) || [];
+    const img    = images[0] || '';
 
-    const imageURLs = req.files.map((file) => file.path);
-
-    const user = await User.findById(req.userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    const book = new Book({
-      userId:      req.userId,
-      seller:      user.name,
-      title, author, category, badge, type, price, description,
-      images:      imageURLs,
-      img:         imageURLs[0],
+    const book = await Book.create({
+      userId: req.userId,
+      seller,
+      title,
+      author,
+      category,
+      price,
+      type,
+      badge,
+      description,
+      images,
+      img,
     });
 
-    await book.save();
-    res.status(201).json({ success: true, book });
+    res.status(201).json({ book });
+  } catch (err) {
+    res.status(500).json({ msg: 'Error creating listing' });
+  }
+};
 
-  } catch (error) {
-    console.log("CREATE BOOK ERROR:", error);
-    res.status(500).json({ success: false, message: error.message });
+// ── DELETE /books/:id — delete own listing ────────────────────────────────────
+export const deleteBook = async (req, res) => {
+  try {
+    const book = await Book.findById(req.params.id);
+    if (!book)                          return res.status(404).json({ msg: 'Book not found' });
+    if (book.userId.toString() !== req.userId) return res.status(403).json({ msg: 'Not authorized' });
+
+    await book.deleteOne();
+    res.json({ msg: 'Deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
   }
 };
