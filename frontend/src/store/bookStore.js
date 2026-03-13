@@ -9,8 +9,8 @@ const API_URL =
 axios.defaults.withCredentials = true;
 
 export const useBookStore = create((set, get) => ({
-  books:       [],   // all books (home/browse feed)
-  myBooks:     [],   // logged-in user's books only
+  books:       [],   // public feed (Active only)
+  myBooks:     [],   // logged-in user's books (all statuses)
   currentBook: null,
   isLoading:   false,
   myLoading:   false,
@@ -22,7 +22,7 @@ export const useBookStore = create((set, get) => ({
     get().fetchBooks("all", query, "");
   },
 
-  // ── All books feed 
+  // ── Public feed ─────────────────────────────────────────────────────────────
   fetchBooks: async (type = "all", search = "", category = "") => {
     set({ isLoading: true, error: null });
     try {
@@ -50,7 +50,7 @@ export const useBookStore = create((set, get) => ({
     }
   },
 
-  // ── My listings (GET /books/my) ─────────────────────────────────────────────
+  // ── My listings ──────────────────────────────────────────────────────────────
   fetchMyBooks: async () => {
     set({ myLoading: true, error: null });
     try {
@@ -68,9 +68,9 @@ export const useBookStore = create((set, get) => ({
       const res = await axios.post(API_URL, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      set((state) => ({
-        books:    [res.data.book, ...state.books],
-        myBooks:  [res.data.book, ...state.myBooks],
+      set(state => ({
+        books:     [res.data.book, ...state.books],
+        myBooks:   [res.data.book, ...state.myBooks],
         isLoading: false,
       }));
       return res.data;
@@ -80,16 +80,35 @@ export const useBookStore = create((set, get) => ({
     }
   },
 
+  // ── Update listing (hide/show, edit price, mark sold) ───────────────────────
+  // Called by:
+  //   👁 toggleVisibility → updateBook(id, { status: 'Disabled' / 'Active' })
+  //   ✏️ EditModal        → updateBook(id, { status: 'Sold', price: '₹300' })
+  updateBook: async (id, data) => {
+    try {
+      const res = await axios.patch(`${API_URL}/${id}`, data);
+      const updated = res.data.book;
+      set(state => ({
+        myBooks: state.myBooks.map(b => b._id === id ? updated : b),
+        books:   state.books.map(b => b._id === id ? updated : b),
+      }));
+      return updated;
+    } catch (err) {
+      set({ error: err.response?.data?.msg || "Update failed" });
+      throw err;
+    }
+  },
+
   // ── Delete listing ──────────────────────────────────────────────────────────
   deleteBook: async (id) => {
     try {
       await axios.delete(`${API_URL}/${id}`);
-      set((state) => ({
+      set(state => ({
         books:   state.books.filter(b => b._id !== id),
         myBooks: state.myBooks.filter(b => b._id !== id),
       }));
     } catch (err) {
-      set({ error: err.response?.data?.msg || "Error deleting listing" });
+      set({ error: err.response?.data?.msg || "Error deleting" });
       throw err;
     }
   },
