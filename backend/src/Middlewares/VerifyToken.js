@@ -20,9 +20,9 @@ export const verifyToken = async (req, res, next) => {
 
     req.userId = decoded.id;
 
-    // ← ADD THIS: attach full user so controllers can use req.user.name
     const user = await User.findById(decoded.id).select('-password');
-    req.user = user;
+    req.user     = user;
+    req.userName = user?.name || 'Unknown';   // ← used by request.controller.js
 
     next();
 
