@@ -1,40 +1,101 @@
-import { useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, X, ImagePlus, BookOpen, Tag,
-  ChevronDown, Loader, FileText
+  ChevronDown, Loader, FileText, CheckCircle2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useBookStore } from "../store/bookStore";
+import { useBookStore }  from "../store/bookStore";
 import { useNotesStore } from "../store/notesStore";
-import { useAuthStore } from "../store/authStore";   // ← ADD THIS
+import { useAuthStore }  from "../store/authStore";
 
-const categories = [
-  "Engineering", "Medical", "Management", "Law", "IT",
-  "Science", "History", "Fiction", "Self-Help", "Productivity", "Technology", "Other"
-];
-const conditions    = ["Like New", "Very Good", "Good", "Fair", "Acceptable"];
-const LISTING_TYPES = ["Sell", "Rent", "Exchange", "PDF Notes"];
+// ─── Level / Class / Category data ───────────────────────────────────────────
+const LEVEL_DATA = {
+  School: {
+    classes: ["Class 10"],
+    categories: ["Mathematics","Science","English","Nepali","Social Studies","Computer Science","Other"],
+  },
+  "High School (+2)": {
+    classes: ["Class 11","Class 12"],
+    categories: ["Mathematics","Physics","Chemistry","Biology","English","Computer Science","Account","Economics","Other"],
+  },
+  Bachelor: {
+    classes: ["1st Year","2nd Year","3rd Year","4th Year"],
+    categories: ["Computer Science / IT","Engineering","Management / BBA / BBS","Medical / Nursing","Law","Education","Science","Arts / Humanities","Other"],
+  },
+};
 
+const LEVELS      = Object.keys(LEVEL_DATA);
+const CONDITIONS  = ["Like New","Very Good","Good","Fair","Acceptable"];
+const LISTING_TYPES = ["Sell","Rent","Exchange","PDF Notes"];
+
+const typeInfo = {
+  Sell:        { color: "text-[#1C7C84] bg-[#1C7C84]/10 border-[#1C7C84]",    desc: "Sell permanently" },
+  Rent:        { color: "text-purple-600 bg-purple-50 border-purple-400",       desc: "Rent by month" },
+  Exchange:    { color: "text-emerald-600 bg-emerald-50 border-emerald-400",    desc: "Swap for another" },
+  "PDF Notes": { color: "text-amber-600 bg-amber-50 border-amber-400",          desc: "Share as PDF" },
+};
+
+// ─── Reusable select ──────────────────────────────────────────────────────────
+function Select({ value, onChange, options, placeholder, disabled }) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        disabled={disabled}
+        className={`w-full appearance-none border rounded-xl px-3 py-2.5 pr-9 text-[13px] outline-none transition bg-white cursor-pointer
+          ${disabled ? "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50" : "border-gray-200 text-gray-700 focus:border-[#1C7C84]"}`}
+      >
+        <option value="" disabled>{placeholder}</option>
+        {options.map(o => <option key={o}>{o}</option>)}
+      </select>
+      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+    </div>
+  );
+}
+
+// ─── Section wrapper ──────────────────────────────────────────────────────────
+function Section({ step, title, children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+    >
+      <div className="flex items-center gap-3 px-6 py-3.5 border-b border-gray-100 bg-gray-50/60">
+        <div className="w-5 h-5 rounded-full bg-[#1C7C84] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+          {step}
+        </div>
+        <h2 className="text-[13px] font-bold text-gray-700">{title}</h2>
+      </div>
+      <div className="p-6">{children}</div>
+    </motion.div>
+  );
+}
+
+// ─── UploadPage ───────────────────────────────────────────────────────────────
 const UploadPage = () => {
   const navigate = useNavigate();
   const fileRef  = useRef();
   const pdfRef   = useRef();
-
-  const { user } = useAuthStore();   // ← GET USER
+  const { user } = useAuthStore();
 
   const { createBook, isLoading: bookLoading, error: bookError, clearError: clearBookError } = useBookStore();
-  const { createNote, isLoading: noteLoading, error: noteError } = useNotesStore();
+  const { createNote, isLoading: noteLoading, error: noteError }                             = useNotesStore();
 
   const isLoading = bookLoading || noteLoading;
   const error     = bookError  || noteError;
 
+  // Form state
+  const [listingType, setListingType] = useState("Sell");
   const [images,      setImages]      = useState([]);
   const [pdfFile,     setPdfFile]     = useState(null);
-  const [listingType, setListingType] = useState("Sell");
   const [title,       setTitle]       = useState("");
   const [author,      setAuthor]      = useState("");
-  const [category,    setCategory]    = useState("");
+  const [level,       setLevel]       = useState("");        // School | High School (+2) | Bachelor
+  const [classYear,   setClassYear]   = useState("");        // Class 10, 1st Year, etc.
+  const [category,    setCategory]    = useState("");        // subject / field
   const [condition,   setCondition]   = useState("");
   const [price,       setPrice]       = useState("");
   const [description, setDescription] = useState("");
@@ -42,7 +103,16 @@ const UploadPage = () => {
   const [pdfDragging, setPdfDragging] = useState(false);
   const [formError,   setFormError]   = useState("");
 
-  // ── Image handlers ──────────────────────────────────────────────────────────
+  // Clear any stale errors from previous pages on mount
+  useEffect(() => {
+    if (clearBookError) clearBookError();
+  }, []);
+
+  const isPdfMode   = listingType === "PDF Notes";
+  const classOpts   = level ? LEVEL_DATA[level].classes    : [];
+  const categoryOpts= level ? LEVEL_DATA[level].categories : [];
+
+  // ── handlers ────────────────────────────────────────────────────────────────
   const handleFiles = (files) => {
     const valid = Array.from(files)
       .filter(f => f.size <= 5 * 1024 * 1024 && f.type.startsWith("image/"))
@@ -50,196 +120,176 @@ const UploadPage = () => {
     setImages(prev => [...prev, ...valid.map(f => ({ file: f, url: URL.createObjectURL(f) }))]);
   };
 
-  const removeImage = (i) => setImages(prev => prev.filter((_, idx) => idx !== i));
-
-  const handleDrop = (e) => {
-    e.preventDefault(); setDragging(false);
-    handleFiles(e.dataTransfer.files);
-  };
-
-  // ── PDF handlers ────────────────────────────────────────────────────────────
   const handlePdf = (files) => {
     const file = Array.from(files)[0];
     if (!file) return;
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
       setFormError("Please upload a PDF file only."); return;
     }
-    if (file.size > 20 * 1024 * 1024) {
-      setFormError("PDF is too large. Maximum size is 20MB."); return;
-    }
-    setPdfFile(file);
-    setFormError("");
+    if (file.size > 20 * 1024 * 1024) { setFormError("PDF too large. Max 20 MB."); return; }
+    setPdfFile(file); setFormError("");
   };
 
-  const handlePdfDrop = (e) => {
-    e.preventDefault(); setPdfDragging(false);
-    handlePdf(e.dataTransfer.files);
+  const handleLevelChange = (val) => {
+    setLevel(val);
+    setClassYear("");   // reset dependent fields
+    setCategory("");
   };
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError("");
-    clearBookError();
+    if (clearBookError) clearBookError();
 
-    if (!title.trim()) { setFormError("Title is required."); return; }
-    if (!category)     { setFormError("Please select a category."); return; }
+    if (!title.trim())  { setFormError("Title is required.");           return; }
+    if (!level)         { setFormError("Please select a level.");        return; }
+    if (!classYear)     { setFormError("Please select a class / year."); return; }
+    if (!category)      { setFormError("Please select a category.");     return; }
 
-    // ── PDF Notes flow ──
-    if (listingType === "PDF Notes") {
+    // PDF Notes flow
+    if (isPdfMode) {
       if (!pdfFile) { setFormError("Please upload a PDF file."); return; }
       try {
-        const formData = new FormData();
-        formData.append("title",    title.trim());
-        formData.append("category", category);
-        formData.append("file",     pdfFile);
-        await createNote(formData);
+        const fd = new FormData();
+        fd.append("title",     title.trim());
+        fd.append("level",     level);
+        fd.append("classYear", classYear);
+        fd.append("category",  category);
+        fd.append("file",      pdfFile);
+        await createNote(fd);
         navigate("/digital-notes");
-      } catch (err) {
-        console.error("Note upload failed:", err);
-      }
+      } catch {}
       return;
     }
 
-    // ── Book flow ──
+    // Book flow
     if (images.length === 0) { setFormError("Please upload at least one image."); return; }
-    if (!condition)           { setFormError("Please select a condition."); return; }
+    if (!condition)           { setFormError("Please select a condition.");         return; }
     if ((listingType === "Sell" || listingType === "Rent") && !price) {
       setFormError("Please enter a price."); return;
     }
 
     try {
-      const formData = new FormData();
-      formData.append("title",       title.trim());
-      formData.append("author",      author.trim());
-      formData.append("category",    category);
-      formData.append("badge",       condition);
-      formData.append("description", description.trim());
-      formData.append("type",        listingType);
-      formData.append("seller",      user?.name || "Unknown");  // ← FIX: was missing!
-
-      let finalPrice = "For Exchange";
-      if (listingType === "Sell") finalPrice = `₹${price}`;
-      if (listingType === "Rent") finalPrice = `₹${price}/mo`;
-      formData.append("price", finalPrice);
-
-      images.forEach(img => formData.append("images", img.file));
-
-      await createBook(formData);
+      const fd = new FormData();
+      fd.append("title",       title.trim());
+      fd.append("author",      author.trim());
+      fd.append("level",       level);
+      fd.append("classYear",   classYear);
+      fd.append("category",    category);
+      fd.append("badge",       condition);
+      fd.append("description", description.trim());
+      fd.append("type",        listingType);
+      fd.append("seller",      user?.name || "Unknown");
+      fd.append("price",
+        listingType === "Sell" ? `₹${price}` :
+        listingType === "Rent" ? `₹${price}/mo` : "For Exchange"
+      );
+      images.forEach(img => fd.append("images", img.file));
+      await createBook(fd);
       navigate("/home");
-    } catch (err) {
-      console.error("Upload failed:", err);
-    }
+    } catch {}
   };
 
-  const isPdfMode = listingType === "PDF Notes";
-
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 font-sans">
-      <div className="max-w-3xl mx-auto px-6 py-8">
+    <div className="h-full overflow-y-auto bg-gray-50">
+      <div className="max-w-2xl mx-auto px-5 py-8 space-y-4">
 
-        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {isPdfMode ? "Upload Notes" : "Upload a Book"}
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-[22px] font-bold text-gray-900">
+            {isPdfMode ? "📄 Upload Study Notes" : "📚 List a Book"}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {isPdfMode ? "Share your study notes as a PDF with other students" : "Fill in the details to list your book on BookHive"}
+          <p className="text-[13px] text-gray-400 mt-0.5">
+            {isPdfMode
+              ? "Share your notes as a PDF with fellow students"
+              : "Fill in the details to post your book on BookHive"}
           </p>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
-          className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* Listing Type */}
-            <div className="p-6 border-b border-gray-100">
-              <label className="block text-[13.5px] font-semibold text-gray-700 mb-3">
-                Listing Type <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2 flex-wrap">
-                {LISTING_TYPES.map((type) => (
-                  <button key={type} type="button"
-                    onClick={() => { setListingType(type); setPrice(""); setFormError(""); setPdfFile(null); setImages([]); }}
-                    className={`px-5 py-2 rounded-lg text-[13px] font-semibold transition border
-                      ${listingType === type
-                        ? "bg-[#1C7C84] text-white border-[#1C7C84]"
-                        : "bg-white text-gray-500 border-gray-200 hover:border-[#1C7C84] hover:text-[#1C7C84]"}`}>
-                    {type}
+          {/* ── Step 1: Listing Type ── */}
+          <Section step="1" title="Listing Type">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {LISTING_TYPES.map(t => {
+                const active = listingType === t;
+                const info   = typeInfo[t];
+                return (
+                  <button key={t} type="button"
+                    onClick={() => { setListingType(t); setPrice(""); setFormError(""); setPdfFile(null); setImages([]); }}
+                    className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 text-center transition
+                      ${active ? info.color + " shadow-sm" : "border-gray-200 text-gray-500 bg-white hover:border-gray-300"}`}
+                  >
+                    <span className="text-[13px] font-bold">{t}</span>
+                    <span className={`text-[10.5px] leading-tight ${active ? "opacity-75" : "text-gray-400"}`}>{info.desc}</span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
+          </Section>
 
-            {/* PDF Upload */}
+          {/* ── Step 2: Upload ── */}
+          <Section step="2" title={isPdfMode ? "PDF File" : "Book Photos"}>
             {isPdfMode ? (
-              <div className="p-6 border-b border-gray-100">
-                <label className="block text-[13.5px] font-semibold text-gray-700 mb-3">
-                  PDF File <span className="text-red-500">*</span>
-                </label>
-                {pdfFile ? (
-                  <div className="flex items-center gap-4 border-2 border-[#1C7C84] rounded-xl px-5 py-4 bg-[#F4FAFA]">
-                    <div className="w-12 h-12 rounded-lg bg-[#1C7C84]/10 flex items-center justify-center shrink-0">
-                      <FileText className="w-6 h-6 text-[#1C7C84]" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{pdfFile.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{(pdfFile.size / (1024 * 1024)).toFixed(2)} MB · PDF</p>
-                    </div>
-                    <button type="button" onClick={() => setPdfFile(null)}
-                      className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center hover:bg-red-100 transition">
-                      <X className="w-4 h-4 text-red-500" />
-                    </button>
+              pdfFile ? (
+                <div className="flex items-center gap-4 border-2 border-[#1C7C84] rounded-xl px-5 py-4 bg-[#F4FAFA]">
+                  <div className="w-11 h-11 rounded-lg bg-[#1C7C84]/10 flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5 text-[#1C7C84]" />
                   </div>
-                ) : (
-                  <div onClick={() => pdfRef.current.click()}
-                    onDragOver={(e) => { e.preventDefault(); setPdfDragging(true); }}
-                    onDragLeave={() => setPdfDragging(false)}
-                    onDrop={handlePdfDrop}
-                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition
-                      ${pdfDragging ? "border-[#1C7C84] bg-[#1C7C84]/5" : "border-gray-200 hover:border-[#1C7C84] hover:bg-[#1C7C84]/5"}`}>
-                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                      <FileText className="w-5 h-5 text-gray-400" />
-                    </div>
-                    <p className="text-[13.5px] font-medium text-gray-600">
-                      Drag & drop PDF here, or <span className="text-[#1C7C84] font-semibold">click to browse</span>
-                    </p>
-                    <p className="text-[12px] text-gray-400 mt-1">PDF only · Max 20MB</p>
-                    <input ref={pdfRef} type="file" accept="application/pdf" className="hidden"
-                      onChange={(e) => handlePdf(e.target.files)} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-gray-800 truncate">{pdfFile.name}</p>
+                    <p className="text-[11.5px] text-gray-400 mt-0.5">{(pdfFile.size/(1024*1024)).toFixed(2)} MB · PDF</p>
                   </div>
-                )}
-              </div>
+                  <button type="button" onClick={() => setPdfFile(null)}
+                    className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center hover:bg-red-100 transition">
+                    <X className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              ) : (
+                <div onClick={() => pdfRef.current.click()}
+                  onDragOver={e => { e.preventDefault(); setPdfDragging(true); }}
+                  onDragLeave={() => setPdfDragging(false)}
+                  onDrop={e => { e.preventDefault(); setPdfDragging(false); handlePdf(e.dataTransfer.files); }}
+                  className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center cursor-pointer transition
+                    ${pdfDragging ? "border-[#1C7C84] bg-[#1C7C84]/5" : "border-gray-200 hover:border-[#1C7C84] hover:bg-gray-50"}`}>
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                    <FileText className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <p className="text-[13px] font-medium text-gray-600">
+                    Drop PDF here or <span className="text-[#1C7C84] font-semibold">browse</span>
+                  </p>
+                  <p className="text-[11.5px] text-gray-400 mt-1">PDF only · Max 20 MB</p>
+                  <input ref={pdfRef} type="file" accept="application/pdf" className="hidden"
+                    onChange={e => handlePdf(e.target.files)} />
+                </div>
+              )
             ) : (
-              /* Image Upload */
-              <div className="p-6 border-b border-gray-100">
-                <label className="block text-[13.5px] font-semibold text-gray-700 mb-3">
-                  Images <span className="text-red-500">*</span>
-                </label>
+              <>
                 <div onClick={() => fileRef.current.click()}
-                  onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                  onDragOver={e => { e.preventDefault(); setDragging(true); }}
                   onDragLeave={() => setDragging(false)}
-                  onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition
-                    ${dragging ? "border-[#1C7C84] bg-[#1C7C84]/5" : "border-gray-200 hover:border-[#1C7C84] hover:bg-[#1C7C84]/5"}`}>
+                  onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
+                  className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center cursor-pointer transition
+                    ${dragging ? "border-[#1C7C84] bg-[#1C7C84]/5" : "border-gray-200 hover:border-[#1C7C84] hover:bg-gray-50"}`}>
                   <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
                     <Upload className="w-5 h-5 text-gray-400" />
                   </div>
-                  <p className="text-[13.5px] font-medium text-gray-600">
-                    Drag & drop images here, or <span className="text-[#1C7C84] font-semibold">click to browse</span>
+                  <p className="text-[13px] font-medium text-gray-600">
+                    Drop images here or <span className="text-[#1C7C84] font-semibold">browse</span>
                   </p>
-                  <p className="text-[12px] text-gray-400 mt-1">PNG, JPG up to 5MB each · Max 5 images</p>
+                  <p className="text-[11.5px] text-gray-400 mt-1">PNG, JPG · Max 5 MB each · Up to 5 images</p>
                   <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
-                    onChange={(e) => handleFiles(e.target.files)} />
+                    onChange={e => handleFiles(e.target.files)} />
                 </div>
                 {images.length > 0 && (
                   <div className="flex gap-3 mt-4 flex-wrap">
                     {images.map((img, i) => (
-                      <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 group">
+                      <div key={i} className="relative w-[72px] h-[72px] rounded-xl overflow-hidden border-2 border-gray-200 group shrink-0">
                         <img src={img.url} alt="" className="w-full h-full object-cover" />
                         {i === 0 && (
-                          <span className="absolute bottom-0 left-0 right-0 bg-[#1C7C84]/80 text-white text-[9px] text-center py-0.5">Main</span>
+                          <span className="absolute bottom-0 left-0 right-0 bg-[#1C7C84]/80 text-white text-[9px] text-center py-0.5 font-semibold">Main</span>
                         )}
-                        <button type="button" onClick={() => removeImage(i)}
+                        <button type="button" onClick={() => setImages(p => p.filter((_,idx) => idx !== i))}
                           className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                           <X className="w-3 h-3 text-white" />
                         </button>
@@ -247,128 +297,165 @@ const UploadPage = () => {
                     ))}
                     {images.length < 5 && (
                       <button type="button" onClick={() => fileRef.current.click()}
-                        className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-[#1C7C84] transition">
+                        className="w-[72px] h-[72px] rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-[#1C7C84] transition shrink-0">
                         <ImagePlus className="w-5 h-5 text-gray-300" />
                       </button>
                     )}
                   </div>
                 )}
-              </div>
+              </>
             )}
+          </Section>
 
-            {/* Title + Author */}
-            <div className="p-6 border-b border-gray-100">
-              <div className="grid grid-cols-2 gap-4">
+          {/* ── Step 3: Book / Notes Details ── */}
+          <Section step="3" title={isPdfMode ? "Notes Details" : "Book Details"}>
+            <div className="space-y-4">
+
+              {/* Title + Author */}
+              <div className={`grid gap-4 ${!isPdfMode ? "grid-cols-2" : "grid-cols-1"}`}>
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">
                     {isPdfMode ? "Notes Title" : "Book Title"} <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex items-center border border-gray-200 rounded-lg px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white">
-                    <BookOpen className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+                  <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white">
+                    <BookOpen className="w-4 h-4 text-gray-300 shrink-0" />
                     <input type="text"
-                      placeholder={isPdfMode ? "e.g. Data Structures Notes" : "e.g. Data Structures & Algorithms"}
-                      value={title} onChange={(e) => setTitle(e.target.value)}
+                      placeholder={isPdfMode ? "e.g. Data Structures Notes" : "e.g. Introduction to Algorithms"}
+                      value={title} onChange={e => setTitle(e.target.value)}
                       className="w-full outline-none text-[13px] text-gray-700 placeholder:text-gray-400 bg-transparent" />
                   </div>
                 </div>
                 {!isPdfMode && (
                   <div>
-                    <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Author</label>
-                    <div className="flex items-center border border-gray-200 rounded-lg px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white">
-                      <Tag className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+                    <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">Author</label>
+                    <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white">
+                      <Tag className="w-4 h-4 text-gray-300 shrink-0" />
                       <input type="text" placeholder="e.g. Thomas H. Cormen"
-                        value={author} onChange={(e) => setAuthor(e.target.value)}
+                        value={author} onChange={e => setAuthor(e.target.value)}
                         className="w-full outline-none text-[13px] text-gray-700 placeholder:text-gray-400 bg-transparent" />
                     </div>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Category + Condition */}
-            <div className="p-6 border-b border-gray-100">
-              <div className="grid grid-cols-2 gap-4">
+              {/* Level → Class/Year → Category (cascading) */}
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                  <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">
+                    Level <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={level}
+                    onChange={handleLevelChange}
+                    options={LEVELS}
+                    placeholder="Select level"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">
+                    Class / Year <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={classYear}
+                    onChange={setClassYear}
+                    options={classOpts}
+                    placeholder={level ? "Select class" : "Select level first"}
+                    disabled={!level}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">
                     Category <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <select value={category} onChange={(e) => setCategory(e.target.value)}
-                      className="w-full appearance-none border border-gray-200 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 outline-none focus:border-[#1C7C84] transition bg-white cursor-pointer pr-9">
-                      <option value="" disabled>Select category</option>
-                      {categories.map(c => <option key={c}>{c}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                  </div>
+                  <Select
+                    value={category}
+                    onChange={setCategory}
+                    options={categoryOpts}
+                    placeholder={level ? "Select category" : "Select level first"}
+                    disabled={!level}
+                  />
                 </div>
-                {!isPdfMode && (
+              </div>
+
+              {/* Condition (books only) */}
+              {!isPdfMode && (
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                    <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">
                       Condition <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <select value={condition} onChange={(e) => setCondition(e.target.value)}
-                        className="w-full appearance-none border border-gray-200 rounded-lg px-3 py-2.5 text-[13px] text-gray-700 outline-none focus:border-[#1C7C84] transition bg-white cursor-pointer pr-9">
-                        <option value="" disabled>Select condition</option>
-                        {conditions.map(c => <option key={c}>{c}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
+                    <Select
+                      value={condition}
+                      onChange={setCondition}
+                      options={CONDITIONS}
+                      placeholder="Select condition"
+                    />
                   </div>
-                )}
-              </div>
-            </div>
 
-            {/* Price */}
-            {!isPdfMode && listingType !== "Exchange" && (
-              <div className="p-6 border-b border-gray-100">
-                <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
-                  Price <span className="text-red-500">*</span>{" "}
-                  {listingType === "Rent" && <span className="text-gray-400 font-normal">(per month)</span>}
-                </label>
-                <div className="flex items-center border border-gray-200 rounded-lg px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white w-1/2">
-                  <span className="text-gray-500 mr-1.5 text-[13px] font-medium">₹</span>
-                  <input type="number" min="0" placeholder="0" value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="w-full outline-none text-[13px] text-gray-700 bg-transparent" />
-                </div>
-              </div>
-            )}
-
-            {/* Description */}
-            {!isPdfMode && (
-              <div className="p-6 border-b border-gray-100">
-                <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Description</label>
-                <div className="border border-gray-200 rounded-lg focus-within:border-[#1C7C84] transition bg-white">
-                  <textarea rows={4}
-                    placeholder="Describe the book's condition, edition, highlights..."
-                    value={description} onChange={(e) => setDescription(e.target.value)}
-                    className="w-full outline-none text-[13px] text-gray-700 placeholder:text-gray-400 px-3 py-2.5 resize-none bg-transparent rounded-lg" />
-                </div>
-              </div>
-            )}
-
-            {/* Errors + Submit */}
-            <div className="p-6 space-y-4">
-              {(formError || error) && (
-                <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-                  <p className="text-red-600 text-sm font-medium">{formError || error}</p>
+                  {/* Price */}
+                  {listingType !== "Exchange" ? (
+                    <div>
+                      <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">
+                        Price <span className="text-red-500">*</span>
+                        {listingType === "Rent" && <span className="text-gray-400 font-normal ml-1">/month</span>}
+                      </label>
+                      <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white">
+                        <span className="text-gray-400 text-[13px] font-semibold shrink-0">₹</span>
+                        <input type="number" min="0" placeholder="0" value={price}
+                          onChange={e => setPrice(e.target.value)}
+                          className="w-full outline-none text-[13px] text-gray-700 bg-transparent" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5 w-full mt-5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <p className="text-[12px] text-emerald-700 font-medium">Marked as "For Exchange"</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                type="submit" disabled={isLoading}
-                className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl text-[14px] transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
-                {isLoading ? (
-                  <><Loader className="w-4 h-4 animate-spin" /> {isPdfMode ? "Uploading Notes..." : "Posting..."}</>
-                ) : (
-                  <>{isPdfMode ? <FileText className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-                  {isPdfMode ? "Upload Notes" : "Post Listing"}</>
-                )}
-              </motion.button>
-            </div>
 
-          </form>
-        </motion.div>
+              {/* Description */}
+              {!isPdfMode && (
+                <div>
+                  <label className="block text-[12px] font-semibold text-gray-600 mb-1.5">Description</label>
+                  <div className="border border-gray-200 rounded-xl focus-within:border-[#1C7C84] transition bg-white overflow-hidden">
+                    <textarea rows={3}
+                      placeholder="Describe the book's condition, edition, any highlights..."
+                      value={description} onChange={e => setDescription(e.target.value)}
+                      className="w-full outline-none text-[13px] text-gray-700 placeholder:text-gray-400 px-3 py-2.5 resize-none bg-transparent" />
+                  </div>
+                </div>
+              )}
+            </div>
+          </Section>
+
+          {/* Errors */}
+          <AnimatePresence>
+            {(formError || error) && (
+              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <p className="text-red-600 text-[13px] font-medium">{formError || error}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Submit */}
+          <motion.button
+            whileHover={{ scale: 1.005 }} whileTap={{ scale: 0.995 }}
+            type="submit" disabled={isLoading}
+            className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-bold py-3.5 rounded-xl text-[14px] transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+          >
+            {isLoading
+              ? <><Loader className="w-4 h-4 animate-spin" />{isPdfMode ? "Uploading..." : "Posting..."}</>
+              : <>{isPdfMode ? <FileText className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+                  {isPdfMode ? "Upload Notes" : "Post Listing"}</>
+            }
+          </motion.button>
+
+        </form>
       </div>
     </div>
   );

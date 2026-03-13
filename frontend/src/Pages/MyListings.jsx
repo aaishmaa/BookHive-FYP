@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Layers, Plus, Eye, Pencil, Trash2, TrendingUp, Star, Clock, MessageSquare } from "lucide-react";
+import {
+  Layers, Plus, Eye, EyeOff, Pencil, Trash2,
+  TrendingUp, Star, Clock, MessageSquare
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBookStore } from "../store/bookStore";
 
@@ -10,78 +13,178 @@ const topSellers = [
   { name: "Sara Khan",    rating: "4.7", books: "15 books", initial: "S" },
 ];
 
-const recentUploads = [
-  { title: "Data Structures & Algorithms", time: "2h ago" },
-  { title: "Organic Chemistry Vol. 2",     time: "4h ago" },
-  { title: "Business Law Notes",           time: "6h ago" },
-];
-
 const statusStyle = {
-  Active:  { pill: "text-emerald-600 bg-emerald-50" },
-  Sold:    { pill: "text-gray-500 bg-gray-100" },
-  Expired: { pill: "text-red-400 bg-red-50" },
+  Active:   "text-emerald-600 bg-emerald-50",
+  Sold:     "text-gray-500   bg-gray-100",
+  Expired:  "text-red-400    bg-red-50",
+  Disabled: "text-slate-400  bg-slate-100",
 };
 
-// Derive a display status from book data
-const getStatus = (book) => {
-  if (book.status) return book.status;   // if backend sends it
-  if (book.sold)   return "Sold";
-  return "Active";
+const getStatus = (book) => book.status || "Active";
+
+const FILTERS  = ["All", "Active", "Sold", "Expired", "Disabled"];
+const STATUSES = ["Active", "Sold", "Expired", "Disabled"];
+
+const timeAgo = (d) => {
+  if (!d) return "";
+  const s = Math.floor((Date.now() - new Date(d)) / 1000);
+  if (s < 3600)  return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)} days ago`;
 };
 
-const FILTERS = ["All", "Active", "Sold", "Expired"];
+// ─── Edit Modal ───────────────────────────────────────────────────────────────
+function EditModal({ book, onClose, onSave }) {
+  const [price,  setPrice]  = useState(
+    book.price?.replace(/[₹\/mo]/g, "").replace("For Exchange","") || ""
+  );
+  const [status, setStatus] = useState(book.status || "Active");
+  const [saving, setSaving] = useState(false);
 
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      let finalPrice = book.price;
+      if (book.type === "Sell")     finalPrice = `₹${price}`;
+      if (book.type === "Rent")     finalPrice = `₹${price}/mo`;
+      if (book.type === "Exchange") finalPrice = "For Exchange";
+      await onSave(book._id, { price: finalPrice, status });
+      onClose();
+    } catch { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+      onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-[400px] p-6"
+      >
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h2 className="text-[16px] font-bold text-gray-900">Edit Listing</h2>
+            <p className="text-[12px] text-gray-400 mt-0.5 max-w-[280px] truncate">{book.title}</p>
+          </div>
+          <button onClick={onClose}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition text-lg leading-none">
+            ×
+          </button>
+        </div>
+
+        {/* Status */}
+        <div className="mb-5">
+          <label className="block text-[12.5px] font-semibold text-gray-600 mb-2">Status</label>
+          <div className="flex flex-wrap gap-2">
+            {STATUSES.map(s => (
+              <button key={s} onClick={() => setStatus(s)}
+                className={`px-3.5 py-1.5 rounded-full text-[12px] font-semibold border transition
+                  ${status === s
+                    ? "bg-[#1C7C84] text-white border-[#1C7C84]"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-[#1C7C84]"}`}>
+                {s}
+              </button>
+            ))}
+          </div>
+          {status === "Sold" && (
+            <p className="text-[11.5px] text-amber-600 mt-2 bg-amber-50 px-3 py-1.5 rounded-lg">
+              ⚠️ Marking as Sold hides this from the marketplace.
+            </p>
+          )}
+        </div>
+
+        {/* Price */}
+        {book.type !== "Exchange" && (
+          <div className="mb-6">
+            <label className="block text-[12.5px] font-semibold text-gray-600 mb-2">
+              Price {book.type === "Rent" && <span className="font-normal text-gray-400">(per month)</span>}
+            </label>
+            <div className="flex items-center border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white">
+              <span className="text-gray-400 mr-1.5 text-[13px]">₹</span>
+              <input type="number" min="0" value={price}
+                onChange={e => setPrice(e.target.value)}
+                className="w-full outline-none text-[13px] text-gray-700 bg-transparent" />
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 py-2.5 rounded-xl bg-[#1C7C84] hover:bg-[#155f65] text-white text-[13px] font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60">
+            {saving
+              ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : "Save Changes"}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── MyListings Page ──────────────────────────────────────────────────────────
 const MyListings = () => {
   const navigate = useNavigate();
-  const { myBooks, myLoading, error, fetchMyBooks, deleteBook } = useBookStore();
+  const { myBooks, myLoading, error, fetchMyBooks, deleteBook, updateBook } = useBookStore();
   const [activeFilter, setActiveFilter] = useState("All");
-  const [deletingId, setDeletingId]     = useState(null);
+  const [deletingId,   setDeletingId]   = useState(null);
+  const [editingBook,  setEditingBook]  = useState(null);
 
-  useEffect(() => {
-    fetchMyBooks();
-  }, []);
+  useEffect(() => { fetchMyBooks(); }, []);
 
   const counts = {
-    Active:  myBooks.filter(b => getStatus(b) === "Active").length,
-    Sold:    myBooks.filter(b => getStatus(b) === "Sold").length,
-    Expired: myBooks.filter(b => getStatus(b) === "Expired").length,
+    Active:   myBooks.filter(b => getStatus(b) === "Active").length,
+    Sold:     myBooks.filter(b => getStatus(b) === "Sold").length,
+    Expired:  myBooks.filter(b => getStatus(b) === "Expired").length,
+    Disabled: myBooks.filter(b => getStatus(b) === "Disabled").length,
   };
 
   const filtered = activeFilter === "All"
     ? myBooks
     : myBooks.filter(b => getStatus(b) === activeFilter);
 
+  const recentUploads = [...myBooks]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 3)
+    .map(b => ({ title: b.title, time: timeAgo(b.createdAt) }));
+
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this listing?")) return;
     setDeletingId(id);
-    try {
-      await deleteBook(id);
-    } catch {
-      alert("Failed to delete. Please try again.");
-    } finally {
-      setDeletingId(null);
-    }
+    try { await deleteBook(id); } catch {}
+    setDeletingId(null);
   };
 
-  const timeAgo = (dateStr) => {
-    if (!dateStr) return "";
-    const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-    if (diff < 3600)  return `${Math.floor(diff / 60)} min ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)} days ago`;
+  const handleSave = async (id, data) => {
+    await updateBook(id, data);
+  };
+
+  // Toggle visibility: Active ↔ Disabled
+  const toggleVisibility = async (book) => {
+    const newStatus = getStatus(book) === "Disabled" ? "Active" : "Disabled";
+    await updateBook(book._id, { status: newStatus });
   };
 
   return (
     <div className="flex h-full overflow-hidden bg-gray-50">
 
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editingBook && (
+          <EditModal book={editingBook} onClose={() => setEditingBook(null)} onSave={handleSave} />
+        )}
+      </AnimatePresence>
+
       {/* ── Main ── */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
 
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between mb-6"
-        >
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#1C7C84] flex items-center justify-center shrink-0">
               <Layers className="w-5 h-5 text-white" />
@@ -91,10 +194,8 @@ const MyListings = () => {
               <p className="text-[13px] text-gray-400">{myBooks.length} total listing{myBooks.length !== 1 ? "s" : ""}</p>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/upload")}
-            className="flex items-center gap-2 bg-[#1C7C84] hover:bg-[#155f65] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition"
-          >
+          <button onClick={() => navigate("/upload")}
+            className="flex items-center gap-2 bg-[#1C7C84] hover:bg-[#155f65] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition">
             <Plus className="w-4 h-4" /> Add New
           </button>
         </motion.div>
@@ -102,15 +203,14 @@ const MyListings = () => {
         {/* Filter tabs */}
         <div className="flex items-center gap-2 mb-5 flex-wrap">
           {FILTERS.map(f => {
-            const count = f === "All" ? myBooks.length : counts[f];
+            const count = f === "All" ? myBooks.length : (counts[f] ?? 0);
             return (
               <button key={f} onClick={() => setActiveFilter(f)}
                 className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition
                   ${activeFilter === f
                     ? "bg-[#1C7C84] text-white border-[#1C7C84]"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-[#1C7C84] hover:text-[#1C7C84]"}`}
-              >
-                {f}{f !== "All" && count > 0 ? ` (${count})` : ""}
+                    : "bg-white text-gray-600 border-gray-200 hover:border-[#1C7C84] hover:text-[#1C7C84]"}`}>
+                {f} ({count})
               </button>
             );
           })}
@@ -125,44 +225,45 @@ const MyListings = () => {
 
         {/* Error */}
         {error && !myLoading && (
-          <div className="max-w-3xl bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-[13px] text-red-500">
-            {error}
-          </div>
+          <div className="max-w-3xl bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-[13px] text-red-500">{error}</div>
         )}
 
-        {/* Listing rows */}
+        {/* Rows */}
         {!myLoading && (
           <div className="flex flex-col gap-2.5 max-w-3xl pb-8">
             <AnimatePresence>
               {filtered.length > 0 ? filtered.map((book, i) => {
-                const status = getStatus(book);
-                const s = statusStyle[status] || statusStyle.Active;
-                const img = book.img || book.images?.[0] || "https://placehold.co/120x120/1C7C84/white?text=Book";
+                const status   = getStatus(book);
+                const img      = book.img || book.images?.[0] || "https://placehold.co/120x120/1C7C84/white?text=Book";
+                const isHidden = status === "Disabled";
 
                 return (
                   <motion.div key={book._id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -16, height: 0, marginBottom: 0 }}
-                    transition={{ duration: 0.22, delay: i * 0.04 }}
-                    className="bg-white rounded-xl border border-gray-200 px-4 py-3.5 flex items-center gap-4 hover:shadow-sm transition"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -16 }}
+                    transition={{ duration: 0.2, delay: i * 0.04 }}
+                    className={`bg-white rounded-xl border border-gray-200 px-4 py-3.5 flex items-center gap-4 hover:shadow-sm transition
+                      ${isHidden ? "opacity-60" : ""}`}
                   >
                     {/* Thumbnail */}
                     <img src={img} alt={book.title}
-                      className="w-[52px] h-[60px] rounded-lg object-cover border border-gray-100 shrink-0"
+                      className="w-[54px] h-[62px] rounded-lg object-cover border border-gray-100 shrink-0"
                       onError={e => { e.target.src = "https://placehold.co/120x120/1C7C84/white?text=Book"; }}
                     />
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2.5 mb-0.5 flex-wrap">
+                      {/* Title row + status badge on right */}
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
                         <h3 className="text-[14px] font-bold text-gray-900 truncate">{book.title}</h3>
-                        <span className={`shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${s.pill}`}>
+                        <span className={`shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${statusStyle[status] || statusStyle.Active}`}>
                           {status}
                         </span>
                       </div>
-                      <p className="text-[12px] text-gray-400">{book.author ? `by ${book.author}` : ""}</p>
-                      <div className="flex items-center gap-4 mt-1.5 flex-wrap">
+                      <p className="text-[12px] text-gray-400 mb-1.5">by {book.author || "—"}</p>
+
+                      {/* Stats row */}
+                      <div className="flex items-center gap-4 flex-wrap">
                         <span className="flex items-center gap-1 text-[12px] text-gray-400">
                           <Eye className="w-3.5 h-3.5" />
                           {book.views ?? 0} views
@@ -174,33 +275,41 @@ const MyListings = () => {
                         <span className={`text-[13px] font-bold ${book.type === "Exchange" ? "text-emerald-600" : "text-[#1C7C84]"}`}>
                           {book.type === "Exchange" ? "Exchange" : book.price}
                         </span>
-                        {book.createdAt && (
-                          <span className="text-[11.5px] text-gray-400">{timeAgo(book.createdAt)}</span>
-                        )}
                       </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Action icons — matching screenshot: hide, view, edit, delete */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Toggle visibility (eye with slash = hide, eye = show) */}
+                      <button
+                        onClick={() => toggleVisibility(book)}
+                        title={isHidden ? "Enable listing" : "Hide listing"}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-slate-600 hover:bg-slate-100 transition">
+                        {isHidden
+                          ? <Eye className="w-4 h-4" />
+                          : <EyeOff className="w-4 h-4" />
+                        }
+                      </button>
+                      {/* View on marketplace */}
                       <button
                         onClick={() => navigate(`/book/${book._id}`)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#1C7C84] hover:bg-[#1C7C84]/10 transition"
-                        title="View"
-                      >
+                        title="View listing"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#1C7C84] hover:bg-[#1C7C84]/10 transition">
                         <Eye className="w-4 h-4" />
                       </button>
+                      {/* Edit */}
                       <button
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition"
-                        title="Edit"
-                      >
+                        onClick={() => setEditingBook(book)}
+                        title="Edit listing"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition">
                         <Pencil className="w-4 h-4" />
                       </button>
+                      {/* Delete */}
                       <button
                         onClick={() => handleDelete(book._id)}
                         disabled={deletingId === book._id}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40"
-                        title="Delete"
-                      >
+                        title="Delete listing"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
                         {deletingId === book._id
                           ? <div className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
                           : <Trash2 className="w-4 h-4" />
@@ -211,16 +320,17 @@ const MyListings = () => {
                 );
               }) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="text-center py-20 text-gray-400"
-                >
+                  className="text-center py-20 text-gray-400">
                   <Layers className="w-10 h-10 mx-auto mb-3 opacity-25" />
                   <p className="text-[14px] font-semibold">
                     No {activeFilter !== "All" ? activeFilter.toLowerCase() + " " : ""}listings yet
                   </p>
-                  <button onClick={() => navigate("/upload")}
-                    className="mt-3 text-[13px] text-[#1C7C84] font-semibold hover:underline">
-                    + Upload your first book
-                  </button>
+                  {activeFilter === "All" && (
+                    <button onClick={() => navigate("/upload")}
+                      className="mt-3 text-[13px] text-[#1C7C84] font-semibold hover:underline">
+                      + Upload your first book
+                    </button>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -261,12 +371,15 @@ const MyListings = () => {
             <Clock className="w-4 h-4 text-gray-400" />
             <h3 className="text-[13px] font-bold text-gray-800">Recent Uploads</h3>
           </div>
-          {recentUploads.map(u => (
-            <div key={u.title} className="mb-3.5 last:mb-0">
-              <p className="text-[13px] font-semibold text-gray-800 leading-tight">{u.title}</p>
-              <p className="text-[11.5px] text-gray-400 mt-0.5">{u.time}</p>
-            </div>
-          ))}
+          {recentUploads.length === 0
+            ? <p className="text-[12px] text-gray-400">No uploads yet</p>
+            : recentUploads.map(u => (
+              <div key={u.title} className="mb-3.5 last:mb-0">
+                <p className="text-[13px] font-semibold text-gray-800 leading-tight truncate">{u.title}</p>
+                <p className="text-[11.5px] text-gray-400 mt-0.5">{u.time}</p>
+              </div>
+            ))
+          }
         </div>
       </aside>
     </div>
