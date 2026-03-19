@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  ShoppingCart, Search, Heart, MessageCircle,
-  Share2, Bookmark, ChevronDown, SlidersHorizontal,
-  TrendingUp, Star, Clock,
-} from "lucide-react";
+import {ShoppingCart, Search, Heart, MessageCircle,Share2, Bookmark, ChevronDown, SlidersHorizontal,TrendingUp, Star, Clock,} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBookStore } from "../store/bookStore";
 

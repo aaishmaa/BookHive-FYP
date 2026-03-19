@@ -1,6 +1,6 @@
 import express from 'express';
 import { createStudentProfile, getStudentProfile } from '../Controllers/studentProfile.controller.js';
-import { verifyToken } from '../Middlewares/verifyToken.js';
+import { verifyToken } from '../Middlewares/VerifyToken.js';
 import { upload } from '../utils/multer.js';
 
 const router = express.Router();

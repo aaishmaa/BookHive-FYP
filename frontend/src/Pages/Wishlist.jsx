@@ -1,17 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ExternalLink, Trash2, TrendingUp, Star, Clock } from "lucide-react";
+import { Heart, ExternalLink, Trash2, TrendingUp, Star, Clock, Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const INITIAL_WISHLIST = [
-  { id: 1, type: "Sell",     title: "Introduction to Algorithms",    author: "by Thomas H. Cormen",   price: "₹450",    seller: "Aarav Mehta",  time: "Added 2 hours ago",  img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop" },
-  { id: 2, type: "Rent",     title: "Organic Chemistry M & B",       author: "by Robert Morrison",    price: "₹150/mo", seller: "Priya Sharma", time: "Added 1 day ago",    img: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=120&h=120&fit=crop" },
-  { id: 3, type: "Exchange", title: "Engineering Mathematics",        author: "by B.S. Grewal",        price: "Exchange",seller: "Ravi Kumar",   time: "Added 3 days ago",   img: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=120&h=120&fit=crop" },
-  { id: 4, type: "Sell",     title: "Gray's Anatomy",                 author: "by Henry Gray",         price: "₹850",    seller: "Meera Nair",   time: "Added 5 days ago",   img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=120&h=120&fit=crop" },
-];
+import { useWishlistStore } from "../store/wishlistStore";
 
 const typeStyle = {
   Sell:     "bg-[#1C7C84]/10 text-[#1C7C84]",
+  Buy:      "bg-[#1C7C84]/10 text-[#1C7C84]",
   Rent:     "bg-purple-50 text-purple-500",
   Exchange: "bg-emerald-50 text-emerald-600",
 };
@@ -22,17 +17,18 @@ const topSellers = [
   { name: "Sara Khan",    rating: "4.7", books: "15 books", initial: "S" },
 ];
 
-const recentUploads = [
-  { title: "Data Structures & Algorithms", time: "2h ago" },
-  { title: "Organic Chemistry Vol. 2",     time: "4h ago" },
-  { title: "Business Law Notes",           time: "6h ago" },
-];
-
 const Wishlist = () => {
-  const [items, setItems] = useState(INITIAL_WISHLIST);
   const navigate = useNavigate();
+  const { wishlist, isLoading, error, fetchWishlist, removeFromWishlist } = useWishlistStore();
+  const [removingId, setRemovingId] = useState(null);
 
-  const remove = (id) => setItems(prev => prev.filter(i => i.id !== id));
+  useEffect(() => { fetchWishlist(); }, []);
+
+  const handleRemove = async (id) => {
+    setRemovingId(id);
+    try { await removeFromWishlist(id); } catch {}
+    setRemovingId(null);
+  };
 
   return (
     <div className="flex h-full overflow-hidden bg-gray-50">
@@ -46,60 +42,86 @@ const Wishlist = () => {
           </div>
           <div>
             <h1 className="text-[22px] font-bold text-gray-900 leading-tight">Wishlist</h1>
-            <p className="text-[13px] text-gray-400">{items.length} saved item{items.length !== 1 ? "s" : ""}</p>
+            <p className="text-[13px] text-gray-400">{wishlist.length} saved item{wishlist.length !== 1 ? "s" : ""}</p>
           </div>
         </motion.div>
 
+        {/* Loading */}
+        {isLoading && (
+          <div className="flex justify-center py-16">
+            <Loader className="w-7 h-7 animate-spin text-[#1C7C84]" />
+          </div>
+        )}
+
+        {/* Error */}
+        {error && !isLoading && (
+          <div className="max-w-2xl bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-[13px] text-red-500">{error}</div>
+        )}
+
         {/* Items */}
-        <div className="max-w-2xl flex flex-col gap-3 pb-8">
-          <AnimatePresence>
-            {items.length > 0 ? items.map((item, i) => (
-              <motion.div key={item.id}
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -20, height: 0 }}
-                transition={{ duration: 0.25, delay: i * 0.05 }}
-                className="bg-white rounded-xl border border-gray-200 px-4 py-4 flex items-center gap-4 hover:shadow-sm transition group"
-              >
-                <img src={item.img} alt={item.title}
-                  className="w-[60px] h-[68px] rounded-lg object-cover border border-gray-100 shrink-0" />
+        {!isLoading && (
+          <div className="max-w-2xl flex flex-col gap-3 pb-8">
+            <AnimatePresence>
+              {wishlist.length > 0 ? wishlist.map((item, i) => (
+                <motion.div key={item.id}
+                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20, height: 0 }}
+                  transition={{ duration: 0.25, delay: i * 0.05 }}
+                  className="bg-white rounded-xl border border-gray-200 px-4 py-4 flex items-center gap-4 hover:shadow-sm transition"
+                >
+                  <img
+                    src={item.img || "https://placehold.co/120x120/1C7C84/white?text=Book"}
+                    alt={item.title}
+                    onError={e => { e.target.src = "https://placehold.co/120x120/1C7C84/white?text=Book"; }}
+                    className="w-[60px] h-[68px] rounded-lg object-cover border border-gray-100 shrink-0"
+                  />
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${typeStyle[item.type]}`}>{item.type}</span>
-                    <span className="text-[11.5px] text-gray-400">{item.time}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${typeStyle[item.type] || typeStyle.Sell}`}>
+                        {item.type}
+                      </span>
+                      <span className="text-[11.5px] text-gray-400">{item.savedTime}</span>
+                    </div>
+                    <h3 className="text-[14px] font-bold text-gray-900 leading-snug truncate">{item.title}</h3>
+                    <p className="text-[12px] text-gray-400 mt-0.5">{item.author}</p>
+                    <p className="text-[13px] font-bold text-[#1C7C84] mt-1">
+                      {item.price}
+                      {item.priceNote && <span className="text-[11.5px] font-normal text-gray-400">{item.priceNote}</span>}
+                      <span className="text-[11.5px] font-normal text-gray-400 ml-1.5">· {item.seller}</span>
+                    </p>
                   </div>
-                  <h3 className="text-[14px] font-bold text-gray-900 leading-snug truncate">{item.title}</h3>
-                  <p className="text-[12px] text-gray-400 mt-0.5">{item.author}</p>
-                  <p className="text-[13px] font-bold text-[#1C7C84] mt-1">
-                    {item.price}
-                    <span className="text-[11.5px] font-normal text-gray-400 ml-1.5">· {item.seller}</span>
-                  </p>
-                </div>
 
-                <div className="flex flex-col gap-2 shrink-0">
+                  <div className="flex flex-col gap-2 shrink-0">
+                    <button onClick={() => navigate(`/book/${item.bookId}`)}
+                      title="View listing"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#1C7C84] hover:bg-[#1C7C84]/10 transition">
+                      <ExternalLink className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleRemove(item.id)}
+                      disabled={removingId === item.id}
+                      title="Remove from wishlist"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
+                      {removingId === item.id
+                        ? <Loader className="w-3.5 h-3.5 animate-spin text-red-400" />
+                        : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </motion.div>
+              )) : (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="text-center py-20 text-gray-400">
+                  <Heart className="w-10 h-10 mx-auto mb-3 opacity-25" />
+                  <p className="text-[14px] font-semibold">Your wishlist is empty</p>
                   <button onClick={() => navigate("/home")}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#1C7C84] hover:bg-[#1C7C84]/10 transition">
-                    <ExternalLink className="w-4 h-4" />
+                    className="mt-3 text-[13px] text-[#1C7C84] font-semibold hover:underline">
+                    Browse books to add
                   </button>
-                  <button onClick={() => remove(item.id)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </motion.div>
-            )) : (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="text-center py-20 text-gray-400">
-                <Heart className="w-10 h-10 mx-auto mb-3 opacity-25" />
-                <p className="text-[14px] font-semibold">Your wishlist is empty</p>
-                <button onClick={() => navigate("/home")}
-                  className="mt-3 text-[13px] text-[#1C7C84] font-semibold hover:underline">
-                  Browse books to add
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {/* Right Panel */}
@@ -135,12 +157,7 @@ const Wishlist = () => {
             <Clock className="w-4 h-4 text-gray-400" />
             <h3 className="text-[13px] font-bold text-gray-800">Recent Uploads</h3>
           </div>
-          {recentUploads.map(u => (
-            <div key={u.title} className="mb-3.5 last:mb-0">
-              <p className="text-[13px] font-semibold text-gray-800 leading-tight">{u.title}</p>
-              <p className="text-[11.5px] text-gray-400 mt-0.5">{u.time}</p>
-            </div>
-          ))}
+          <p className="text-[12px] text-gray-400">No recent uploads</p>
         </div>
       </aside>
     </div>

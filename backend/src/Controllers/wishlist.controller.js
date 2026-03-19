@@ -1,5 +1,5 @@
 import { Wishlist } from '../models/wishlist.model.js';
-import { Book }     from '../Models/book.model.js';
+import { Book }     from '../models/book.model.js';
 
 const timeAgo = (d) => {
   const s = Math.floor((Date.now() - new Date(d)) / 1000);

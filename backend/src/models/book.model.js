@@ -21,4 +21,4 @@ const bookSchema = new mongoose.Schema({
   status:      { type: String, enum: ['Active', 'Sold', 'Expired', 'Disabled'], default: 'Active' },
 }, { timestamps: true });
 
-export const Book = mongoose.model('Book', bookSchema);
+export const Book = mongoose.models.Book || mongoose.model('Book', bookSchema);

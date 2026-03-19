@@ -47,7 +47,7 @@ const avatarColor = (initial) => {
   return map[initial] || "bg-gray-500";
 };
 
-// ─── Chat Page ────────────────────────────────────────────────────────────────
+// ─── Chat Page ───────────
 const ChatPage = () => {
   const [contacts, setContacts]       = useState(CONTACTS);
   const [activeId, setActiveId]       = useState(1);

@@ -3,12 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { generateTokenAndSetCookie } from '../utils/generateTokenAndSetCookie.js';
-import {
-  sendVerificationEmail,
-  sendWelcomeEmail,
-  sendPasswordResetEmail,
-  sendPasswordResetSuccessEmail,
-} from '../mail/email.js'; // adjust path to wherever your email.js lives
+import {sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail, sendPasswordResetSuccessEmail,} from '../mail/email.js'; 
 
 dotenv.config();
 
@@ -115,10 +110,11 @@ export const login = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('token', {
     httpOnly: true,
-    sameSite: 'none',
-    secure: true,
+    sameSite: isProduction ? 'none' : 'lax',
+    secure:   isProduction,
   });
   res.status(200).json({ msg: 'Logged out successfully' });
 };

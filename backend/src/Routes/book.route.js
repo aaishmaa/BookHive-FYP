@@ -3,7 +3,7 @@ import {
   getBooks, getBookById, getMyBooks,
   createBook, updateBook, deleteBook,
 } from '../Controllers/book.controller.js';
-import { verifyToken } from '../Middlewares/verifyToken.js';
+import { verifyToken } from '../Middlewares/VerifyToken.js';
 import { uploadBook }  from '../utils/multer.js';
 
 const router = express.Router();

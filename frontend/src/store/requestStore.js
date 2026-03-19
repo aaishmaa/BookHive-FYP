@@ -14,7 +14,7 @@ export const useRequestStore = create((set) => ({
   isLoading:    false,
   error:        null,
 
-  // ── Fetch received requests ─────────────────────────────────────────────────
+  // ── Fetch received ──────────────────────────────────────────────────────────
   fetchRequests: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -25,7 +25,7 @@ export const useRequestStore = create((set) => ({
     }
   },
 
-  // ── Fetch sent requests ─────────────────────────────────────────────────────
+  // ── Fetch sent ──────────────────────────────────────────────────────────────
   fetchSentRequests: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -36,12 +36,12 @@ export const useRequestStore = create((set) => ({
     }
   },
 
-  // ── Send a new request ──────────────────────────────────────────────────────
-  // Call this from BookDetailPage: sendRequest({ bookId, type, offer })
-  sendRequest: async ({ bookId, type, offer }) => {
+  // ── Send request ────────────────────────────────────────────────────────────
+  // BookDetailPage sends: { bookId, senderName, type, offerTitle, returnBy, message }
+  sendRequest: async (data) => {
     set({ error: null });
     try {
-      const res = await axios.post(API_URL, { bookId, type, offer });
+      const res = await axios.post(API_URL, data);
       set((state) => ({ sentRequests: [res.data.request, ...state.sentRequests] }));
       return res.data.request;
     } catch (err) {
@@ -51,13 +51,17 @@ export const useRequestStore = create((set) => ({
     }
   },
 
-  // ── Accept or decline ───────────────────────────────────────────────────────
+  // ── Accept / Decline ────────────────────────────────────────────────────────
   updateStatus: async (id, status) => {
     try {
       const res = await axios.patch(`${API_URL}/${id}`, { status });
       const updated = res.data.request;
       set((state) => ({
-        requests: state.requests.map(r => r.id === id ? updated : r),
+        requests: state.requests.map(r =>
+          // match by both id and _id since backend fmt() sets both
+          (r.id?.toString() === id?.toString() || r._id?.toString() === id?.toString())
+            ? updated : r
+        ),
       }));
       return updated;
     } catch (err) {
@@ -71,7 +75,9 @@ export const useRequestStore = create((set) => ({
     try {
       await axios.delete(`${API_URL}/${id}`);
       set((state) => ({
-        sentRequests: state.sentRequests.filter(r => r.id !== id),
+        sentRequests: state.sentRequests.filter(r =>
+          r.id?.toString() !== id?.toString() && r._id?.toString() !== id?.toString()
+        ),
       }));
     } catch (err) {
       set({ error: err.response?.data?.msg || "Error cancelling request" });

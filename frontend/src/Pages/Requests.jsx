@@ -12,12 +12,12 @@ const statusStyle = {
 
 const typeStyle = {
   Exchange: "bg-emerald-50 text-emerald-600",
-  Rent:     "bg-purple-50 text-purple-500",
+  Borrow:   "bg-purple-50 text-purple-500",
   Buy:      "bg-[#1C7C84]/10 text-[#1C7C84]",
 };
 
 const avatarColors = ["bg-[#1C7C84]","bg-purple-500","bg-amber-500","bg-rose-500","bg-blue-500","bg-indigo-500"];
-const getAvatarColor = (name) => avatarColors[name?.charCodeAt(0) % avatarColors.length] || "bg-gray-400";
+const getAvatarColor = (name) => avatarColors[(name?.charCodeAt(0) || 0) % avatarColors.length];
 
 const topSellers = [
   { name: "Priya Sharma", rating: "4.9", books: "24 books", initial: "P" },
@@ -28,29 +28,48 @@ const topSellers = [
 const FILTERS = ["All", "Pending", "Accepted", "Declined"];
 
 const Requests = () => {
-  const navigate  = useNavigate();
-  const { requests, isLoading, error, fetchRequests, updateStatus } = useRequestStore();
-  const [filter,     setFilter]     = useState("All");
-  const [updatingId, setUpdatingId] = useState(null);
-  const [tab,        setTab]        = useState("received"); // received | sent
+  const navigate = useNavigate();
+  const {
+    requests, sentRequests, isLoading, error,
+    fetchRequests, fetchSentRequests, updateStatus, cancelRequest,
+  } = useRequestStore();
 
-  useEffect(() => { fetchRequests(); }, []);
+  const [filter,      setFilter]      = useState("All");
+  const [updatingId,  setUpdatingId]  = useState(null);
+  const [cancellingId,setCancellingId]= useState(null);
+  const [tab,         setTab]         = useState("received");
+
+  useEffect(() => {
+    fetchRequests();
+    fetchSentRequests();
+  }, []);
+
+  // Choose list based on active tab
+  const list = tab === "received" ? requests : sentRequests;
 
   const filtered = filter === "All"
-    ? requests
-    : requests.filter(r => r.status === filter);
+    ? list
+    : list.filter(r => r.status === filter);
 
-  const counts = {
-    Pending:  requests.filter(r => r.status === "Pending").length,
-    Accepted: requests.filter(r => r.status === "Accepted").length,
-    Declined: requests.filter(r => r.status === "Declined").length,
-  };
+  const counts = (arr) => ({
+    Pending:  arr.filter(r => r.status === "Pending").length,
+    Accepted: arr.filter(r => r.status === "Accepted").length,
+    Declined: arr.filter(r => r.status === "Declined").length,
+  });
 
   const handleUpdate = async (id, status) => {
     setUpdatingId(id);
     try { await updateStatus(id, status); } catch {}
     setUpdatingId(null);
   };
+
+  const handleCancel = async (id) => {
+    setCancellingId(id);
+    try { await cancelRequest(id); } catch {}
+    setCancellingId(null);
+  };
+
+  const c = counts(list);
 
   return (
     <div className="flex h-full overflow-hidden bg-gray-50">
@@ -63,26 +82,37 @@ const Requests = () => {
             <RefreshCcw className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-[22px] font-bold text-gray-900 leading-tight">Requests</h1>
-            <p className="text-[13px] text-gray-400">Exchange & rental requests from other students</p>
+            <h1 className="text-[22px] font-bold text-gray-900 leading-tight">Book Requests</h1>
+            <p className="text-[13px] text-gray-400">Manage your borrow & exchange requests</p>
           </div>
         </motion.div>
 
-        {/* Tab: Received / Sent */}
-        <div className="flex items-center gap-1 mb-4 bg-gray-100 rounded-xl p-1 w-fit">
-          {["received", "sent"].map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-5 py-1.5 rounded-lg text-[13px] font-semibold transition capitalize
-                ${tab === t ? "bg-white text-[#1C7C84] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
-              {t === "received" ? `Received (${requests.length})` : "Sent"}
+        {/* Received / Sent tabs */}
+        <div className="flex items-center border-b border-gray-200 mb-5">
+          {[
+            { key: "received", label: "Received Requests", count: requests.length },
+            { key: "sent",     label: "Sent Requests",     count: sentRequests.length },
+          ].map(t => (
+            <button key={t.key} onClick={() => { setTab(t.key); setFilter("All"); }}
+              className={`flex items-center gap-2 px-1 pb-3 mr-6 text-[13.5px] font-semibold border-b-2 transition
+                ${tab === t.key
+                  ? "border-[#1C7C84] text-[#1C7C84]"
+                  : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+              {t.label}
+              {t.count > 0 && (
+                <span className={`text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center
+                  ${tab === t.key ? "bg-[#1C7C84] text-white" : "bg-gray-200 text-gray-600"}`}>
+                  {t.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
-        {/* Filter tabs */}
+        {/* Status filter pills */}
         <div className="flex items-center gap-2 mb-5 flex-wrap">
           {FILTERS.map(f => {
-            const count = f === "All" ? requests.length : (counts[f] ?? 0);
+            const count = f === "All" ? list.length : (c[f] ?? 0);
             return (
               <button key={f} onClick={() => setFilter(f)}
                 className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition
@@ -107,67 +137,127 @@ const Requests = () => {
           <div className="max-w-2xl bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-[13px] text-red-500">{error}</div>
         )}
 
-        {/* Request cards */}
+        {/* Cards */}
         {!isLoading && (
           <div className="flex flex-col gap-3 max-w-2xl pb-8">
             <AnimatePresence>
               {filtered.length > 0 ? filtered.map((req, i) => {
-                const s = statusStyle[req.status] || statusStyle.Pending;
+                const s  = statusStyle[req.status] || statusStyle.Pending;
+                const id = req._id || req.id;
                 return (
-                  <motion.div key={req.id}
+                  <motion.div key={id?.toString()}
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ delay: i * 0.04 }}
                     className={`bg-white rounded-xl border ${s.border} px-5 py-4 hover:shadow-sm transition`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-full ${getAvatarColor(req.fi)} flex items-center justify-center text-white text-[13px] font-bold shrink-0`}>
-                        {req.fi}
+                      {/* Avatar */}
+                      <div className={`w-10 h-10 rounded-full ${getAvatarColor(req.from)} flex items-center justify-center text-white text-[13px] font-bold shrink-0`}>
+                        {req.fi || req.from?.[0]?.toUpperCase() || "?"}
                       </div>
+
                       <div className="flex-1 min-w-0">
+                        {/* Name + badges */}
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-[13.5px] font-bold text-gray-900">{req.from}</p>
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${typeStyle[req.type] || ""}`}>{req.type}</span>
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>{req.status}</span>
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${typeStyle[req.type] || "bg-gray-100 text-gray-500"}`}>
+                            {req.type}
+                          </span>
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>
+                            {req.status}
+                          </span>
                         </div>
+
+                        {/* Book title */}
                         <p className="text-[12.5px] text-gray-600 mt-1">
-                          Wants your <span className="font-semibold text-gray-800">"{req.book}"</span>
+                          {tab === "received" ? "Wants your" : "You requested"}{" "}
+                          <span className="font-semibold text-gray-800">"{req.book}"</span>
                         </p>
-                        <p className="text-[12px] text-gray-400 mt-0.5">
-                          Offering: <span className="text-gray-600 font-medium">{req.offer}</span>
-                        </p>
+
+                        {/* Offer / return date */}
+                        {req.offer && (
+                          <p className="text-[12px] text-gray-400 mt-0.5">
+                            {req.type === "Exchange" ? "Offering: " : "Return by: "}
+                            <span className="text-gray-600 font-medium">{req.offer}</span>
+                          </p>
+                        )}
+
+                        {/* Message */}
+                        {req.message && (
+                          <p className="text-[12px] text-gray-400 mt-0.5 italic">"{req.message}"</p>
+                        )}
+
                         <p className="text-[11.5px] text-gray-400 mt-1">{req.time}</p>
                       </div>
                     </div>
 
-                    {req.status === "Pending" && tab === "received" && (
-                      <div className="flex items-center gap-2 mt-4">
-                        <button onClick={() => handleUpdate(req.id, "Accepted")}
-                          disabled={updatingId === req.id}
-                          className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[12.5px] font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50">
-                          {updatingId === req.id
-                            ? <Loader className="w-3.5 h-3.5 animate-spin" />
-                            : <Check className="w-3.5 h-3.5" />}
-                          Accept
-                        </button>
-                        <button onClick={() => handleUpdate(req.id, "Declined")}
-                          disabled={updatingId === req.id}
-                          className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-500 text-[12.5px] font-semibold px-4 py-2 rounded-lg transition border border-red-200 disabled:opacity-50">
-                          <X className="w-3.5 h-3.5" /> Decline
-                        </button>
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 mt-4">
+                      {/* RECEIVED + PENDING → Accept / Decline / Message */}
+                      {tab === "received" && req.status === "Pending" && (
+                        <>
+                          <button onClick={() => handleUpdate(id, "Accepted")}
+                            disabled={updatingId === id}
+                            className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[12.5px] font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50">
+                            {updatingId === id
+                              ? <Loader className="w-3.5 h-3.5 animate-spin" />
+                              : <Check className="w-3.5 h-3.5" />}
+                            Accept
+                          </button>
+                          <button onClick={() => handleUpdate(id, "Declined")}
+                            disabled={updatingId === id}
+                            className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-500 text-[12.5px] font-semibold px-4 py-2 rounded-lg transition border border-red-200 disabled:opacity-50">
+                            <X className="w-3.5 h-3.5" /> Decline
+                          </button>
+                          <button onClick={() => navigate("/chat")}
+                            className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 text-[12.5px] font-semibold px-4 py-2 rounded-lg transition border border-gray-200">
+                            <MessageCircle className="w-3.5 h-3.5" /> Message
+                          </button>
+                        </>
+                      )}
+
+                      {/* RECEIVED + ACCEPTED → Chat button */}
+                      {tab === "received" && req.status === "Accepted" && (
                         <button onClick={() => navigate("/chat")}
-                          className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 text-[12.5px] font-semibold px-4 py-2 rounded-lg transition border border-gray-200">
-                          <MessageCircle className="w-3.5 h-3.5" /> Message
+                          className="flex items-center gap-1.5 bg-[#1C7C84] hover:bg-[#155f65] text-white text-[12.5px] font-semibold px-4 py-2 rounded-lg transition">
+                          <MessageCircle className="w-3.5 h-3.5" /> Chat with {req.from}
                         </button>
-                      </div>
-                    )}
+                      )}
+
+                      {/* SENT + PENDING → Cancel */}
+                      {tab === "sent" && req.status === "Pending" && (
+                        <button onClick={() => handleCancel(id)}
+                          disabled={cancellingId === id}
+                          className="flex items-center gap-1.5 text-red-400 hover:text-red-600 text-[12.5px] font-medium border border-red-200 hover:border-red-400 px-4 py-2 rounded-lg transition disabled:opacity-50">
+                          {cancellingId === id
+                            ? <Loader className="w-3.5 h-3.5 animate-spin" />
+                            : <X className="w-3.5 h-3.5" />}
+                          Cancel Request
+                        </button>
+                      )}
+
+                      {/* SENT + ACCEPTED → Chat */}
+                      {tab === "sent" && req.status === "Accepted" && (
+                        <button onClick={() => navigate("/chat")}
+                          className="flex items-center gap-1.5 bg-[#1C7C84] hover:bg-[#155f65] text-white text-[12.5px] font-semibold px-4 py-2 rounded-lg transition">
+                          <MessageCircle className="w-3.5 h-3.5" /> Chat with Seller
+                        </button>
+                      )}
+                    </div>
                   </motion.div>
                 );
               }) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   className="text-center py-20 text-gray-400">
                   <RefreshCcw className="w-10 h-10 mx-auto mb-3 opacity-25" />
-                  <p className="text-[14px] font-semibold">No {filter !== "All" ? filter.toLowerCase() + " " : ""}requests yet</p>
+                  <p className="text-[14px] font-semibold">
+                    No {filter !== "All" ? filter.toLowerCase() + " " : ""}
+                    {tab === "received" ? "received" : "sent"} requests yet
+                  </p>
+                  {tab === "sent" && (
+                    <p className="text-[12.5px] mt-1">Browse books and request to borrow or exchange</p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -204,11 +294,26 @@ const Requests = () => {
           ))}
         </div>
         <div className="px-5 py-5">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-gray-400" />
-            <h3 className="text-[13px] font-bold text-gray-800">Recent Uploads</h3>
+            <h3 className="text-[13px] font-bold text-gray-800">How Requests Work</h3>
           </div>
-          <p className="text-[12px] text-gray-400">No recent uploads</p>
+          <div className="space-y-3">
+            {[
+              { n:"1", t:"Browse a book",  d:"Find a book to borrow or exchange" },
+              { n:"2", t:"Send Request",   d:"Click Request on the book detail page" },
+              { n:"3", t:"Wait for reply", d:"Owner accepts or declines your request" },
+              { n:"4", t:"Chat & arrange", d:"Once accepted, chat to arrange handoff" },
+            ].map(step => (
+              <div key={step.n} className="flex items-start gap-2.5">
+                <span className="w-5 h-5 rounded-full bg-[#1C7C84] text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{step.n}</span>
+                <div>
+                  <p className="text-[12.5px] font-semibold text-gray-700">{step.t}</p>
+                  <p className="text-[11.5px] text-gray-400">{step.d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </aside>
     </div>

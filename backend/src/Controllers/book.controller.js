@@ -38,7 +38,8 @@ export const getBookById = async (req, res) => {
     await Book.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
     res.json({ book });
   } catch (err) {
-    res.status(500).json({ msg: err.message });
+    // Handle invalid ObjectId format gracefully
+    res.status(404).json({ msg: 'Book not found' });
   }
 };
 
@@ -48,8 +49,8 @@ export const createBook = async (req, res) => {
     const images = req.files?.map(f => f.path) || [];
     const img    = images[0] || '';
     const book = await Book.create({
-      userId: req.userId,
-      seller: seller || 'Unknown',
+      userId:    req.userId,
+      seller:    seller    || 'Unknown',
       title, author,
       level:     level     || '',
       classYear: classYear || '',
@@ -68,8 +69,12 @@ export const createBook = async (req, res) => {
 export const updateBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
-    if (!book)                                 return res.status(404).json({ msg: 'Book not found' });
-    if (book.userId.toString() !== req.userId) return res.status(403).json({ msg: 'Not authorized' });
+    if (!book) return res.status(404).json({ msg: 'Book not found' });
+
+    // Guard against books saved with null userId (old broken uploads)
+    if (book.userId && book.userId.toString() !== req.userId)
+      return res.status(403).json({ msg: 'Not authorized' });
+
     const allowed = ['status','price','title','author','description','category','badge','level','classYear'];
     const updates = {};
     allowed.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
@@ -83,8 +88,12 @@ export const updateBook = async (req, res) => {
 export const deleteBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
-    if (!book)                                 return res.status(404).json({ msg: 'Book not found' });
-    if (book.userId.toString() !== req.userId) return res.status(403).json({ msg: 'Not authorized' });
+    if (!book) return res.status(404).json({ msg: 'Book not found' });
+
+    // Guard against books saved with null userId (old broken uploads)
+    if (book.userId && book.userId.toString() !== req.userId)
+      return res.status(403).json({ msg: 'Not authorized' });
+
     await book.deleteOne();
     res.json({ msg: 'Deleted successfully' });
   } catch (err) {
