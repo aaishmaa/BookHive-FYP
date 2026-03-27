@@ -1,5 +1,6 @@
-import { Request } from '../models/request.model.js';
-import { Book }    from '../models/book.model.js';
+import { Request } from '../Models/request.model.js';
+import { Book }    from '../Models/book.model.js';
+import { createNotif } from './notification.controller.js';
 
 const timeAgo = (d) => {
   if (!d) return "";
@@ -9,27 +10,25 @@ const timeAgo = (d) => {
   return `${Math.floor(s / 86400)} days ago`;
 };
 
-// Format for frontend — maps DB fields to what Requests.jsx expects
 const fmt = (r) => ({
-  id:       r._id,
-  _id:      r._id,
-  from:     r.fromUserName,
-  fi:       r.fromUserName?.[0]?.toUpperCase() || "?",
-  book:     r.bookTitle,
-  bookImg:  r.bookImg || '',
-  type:     r.type,
-  offer:    r.offer || '',
-  returnBy: r.returnBy,
-  message:  r.message || '',
-  time:     timeAgo(r.createdAt),
-  status:   r.status,
-  // Keep raw IDs for frontend comparisons
+  id:         r._id,
+  _id:        r._id,
+  from:       r.fromUserName,
+  fi:         r.fromUserName?.[0]?.toUpperCase() || "?",
+  book:       r.bookTitle,
+  bookImg:    r.bookImg || '',
+  bookId:     r.bookId,           // ← for book link in Requests page
+  type:       r.type,
+  offer:      r.offer || '',
+  returnBy:   r.returnBy,
+  message:    r.message || '',
+  time:       timeAgo(r.createdAt),
+  status:     r.status,
   fromUserId: r.fromUserId,
   toUserId:   r.toUserId,
-  bookId:     r.bookId,
 });
 
-// ── GET /requests — received requests ────────────────────────────────────────
+// ── GET /requests — received ──────────────────────────────────────────────────
 export const getMyRequests = async (req, res) => {
   try {
     const requests = await Request.find({ toUserId: req.userId }).sort({ createdAt: -1 });
@@ -39,7 +38,7 @@ export const getMyRequests = async (req, res) => {
   }
 };
 
-// ── GET /requests/sent — sent requests ───────────────────────────────────────
+// ── GET /requests/sent ────────────────────────────────────────────────────────
 export const getSentRequests = async (req, res) => {
   try {
     const requests = await Request.find({ fromUserId: req.userId }).sort({ createdAt: -1 });
@@ -49,15 +48,13 @@ export const getSentRequests = async (req, res) => {
   }
 };
 
-// ── POST /requests — create request ──────────────────────────────────────────
-// Frontend sends: { bookId, type, offerTitle, returnBy, message, senderName }
+// ── POST /requests ────────────────────────────────────────────────────────────
 export const createRequest = async (req, res) => {
   try {
     const { bookId, type, offerTitle, returnBy, message, senderName } = req.body;
 
     const book = await Book.findById(bookId);
     if (!book) return res.status(404).json({ msg: 'Book not found' });
-
     if (book.userId.toString() === req.userId)
       return res.status(400).json({ msg: "You can't request your own book" });
 
@@ -65,11 +62,9 @@ export const createRequest = async (req, res) => {
     if (existing)
       return res.status(400).json({ msg: 'You already have a pending request for this book' });
 
-    // Build offer string from either offerTitle (Exchange) or returnBy (Borrow)
     let offerStr = offerTitle || '';
-    if (!offerStr && returnBy) {
+    if (!offerStr && returnBy)
       offerStr = `Return by ${new Date(returnBy).toLocaleDateString()}`;
-    }
 
     const request = await Request.create({
       fromUserId:   req.userId,
@@ -85,6 +80,14 @@ export const createRequest = async (req, res) => {
     });
 
     await Book.findByIdAndUpdate(bookId, { $inc: { enquiries: 1 } });
+
+    // ── Notify book owner ──────────────────────────────────────────────────────
+    await createNotif(
+      book.userId,
+      'request',
+      `📩 ${senderName || req.userName} sent a ${type} request for "${book.title}"`,
+      '/requests'
+    );
 
     res.status(201).json({ request: fmt(request) });
   } catch (err) {
@@ -109,13 +112,24 @@ export const updateRequestStatus = async (req, res) => {
 
     request.status = status;
     await request.save();
+
+    // ── Notify the requester ───────────────────────────────────────────────────
+    await createNotif(
+      request.fromUserId,
+      status === 'Accepted' ? 'request' : 'system',
+      status === 'Accepted'
+        ? `✅ Your ${request.type} request for "${request.bookTitle}" was accepted!`
+        : `❌ Your ${request.type} request for "${request.bookTitle}" was declined.`,
+      '/requests'
+    );
+
     res.json({ request: fmt(request) });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
 };
 
-// ── DELETE /requests/:id — cancel ────────────────────────────────────────────
+// ── DELETE /requests/:id — cancel ─────────────────────────────────────────────
 export const deleteRequest = async (req, res) => {
   try {
     const request = await Request.findById(req.params.id);
@@ -131,3 +145,27 @@ export const deleteRequest = async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 };
+
+// ── GET /requests/book/:bookId — get all requests for a specific book ──────────
+// Used by BookDetailPage to show who's interested
+export const getBookRequests = async (req, res) => {
+  try {
+    const requests = await Request.find({ bookId: req.params.bookId })
+      .sort({ createdAt: -1 })
+      .limit(10);
+    res.json({
+      requests: requests.map(r => ({
+        id:          r._id,
+        from:        r.fromUserName,
+        fi:          r.fromUserName?.[0]?.toUpperCase() || "?",
+        type:        r.type,
+        offer:       r.offer || '',
+        status:      r.status,
+        time:        timeAgo(r.createdAt),
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+
