@@ -3,40 +3,36 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import { generateTokenAndSetCookie } from '../utils/generateTokenAndSetCookie.js';
-import {sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail, sendPasswordResetSuccessEmail,} from '../mail/email.js'; 
+import {
+  sendVerificationEmail, sendWelcomeEmail,
+  sendPasswordResetEmail, sendPasswordResetSuccessEmail,
+} from '../mail/email.js';
+import { createNotif } from './notification.controller.js';   // ← ADD
 
 dotenv.config();
 
 export const signup = async (req, res) => {
   const { name, email, password } = req.body;
-
   try {
-    if (!email || !password || !name) {
+    if (!email || !password || !name)
       return res.status(400).json({ msg: 'Please fill in all fields' });
-    }
 
     const userAlreadyExists = await User.findOne({ email });
-    if (userAlreadyExists) {
+    if (userAlreadyExists)
       return res.status(400).json({ msg: 'User already exists' });
-    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
 
     const user = new User({
-      name,
-      email,
-      password: hashedPassword,
+      name, email, password: hashedPassword,
       verificationToken,
-      verificationTokenExpires: Date.now() + 600000, // 10 minutes
+      verificationTokenExpires: Date.now() + 600000,
     });
 
     await user.save();
-
     generateTokenAndSetCookie(res, user._id);
-    await sendVerificationEmail(user.email, verificationToken); 
+    await sendVerificationEmail(user.email, verificationToken);
 
     res.status(201).json({
       msg: 'User created successfully',
@@ -53,15 +49,11 @@ export const verifyEmail = async (req, res) => {
   try {
     const user = await User.findOne({
       verificationToken: code,
-      verificationTokenExpires: { $gt: Date.now() }, // check expiry!
+      verificationTokenExpires: { $gt: Date.now() },
     });
 
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired verification code',
-      });
-    }
+    if (!user)
+      return res.status(400).json({ success: false, message: 'Invalid or expired verification code' });
 
     user.isVerfied = true;
     user.verificationToken = undefined;
@@ -69,6 +61,10 @@ export const verifyEmail = async (req, res) => {
     await user.save();
 
     await sendWelcomeEmail(user.email, user.name);
+
+    // Welcome notification on email verification
+    await createNotif(user._id, 'system',
+      `🎉 Welcome to BookHive, ${user.name}! Start browsing or upload your first book.`, '/home');
 
     res.status(200).json({
       success: true,
@@ -85,19 +81,21 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
-    if (!user) {
+    if (!user)
       return res.status(400).json({ msg: 'Invalid credentials' });
-    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    if (!isMatch)
       return res.status(400).json({ msg: 'Invalid credentials' });
-    }
 
     generateTokenAndSetCookie(res, user._id);
 
     user.lastLogin = new Date();
     await user.save();
+
+    // Login notification
+    await createNotif(user._id, 'system',
+      `👋 Welcome back, ${user.name}! Check out the latest book listings.`, '/home');
 
     res.status(200).json({
       msg: 'Logged in successfully',
@@ -123,20 +121,15 @@ export const forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
     const user = await User.findOne({ email });
-    if (!user) {
+    if (!user)
       return res.status(400).json({ msg: 'User not found' });
-    }
 
     const resetToken = crypto.randomBytes(20).toString('hex');
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    user.resetPasswordExpires = Date.now() + 3600000;
     await user.save();
 
-    await sendPasswordResetEmail(
-      user.email,
-      `${process.env.CLIENT_URL}/reset-password/${resetToken}`
-    );
-
+    await sendPasswordResetEmail(user.email, `${process.env.CLIENT_URL}/reset-password/${resetToken}`);
     res.status(200).json({ msg: 'Password reset link sent to your email' });
   } catch (error) {
     console.log('error in forgotPassword', error);
@@ -154,11 +147,8 @@ export const resetPassword = async (req, res) => {
       resetPasswordExpires: { $gt: Date.now() },
     });
 
-    if (!user) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Invalid or expired reset token' });
-    }
+    if (!user)
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
 
     user.password = await bcrypt.hash(password, 10);
     user.resetPasswordToken = undefined;
@@ -166,10 +156,7 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     await sendPasswordResetSuccessEmail(user.email);
-
-    res
-      .status(200)
-      .json({ success: true, message: 'Password reset successful' });
+    res.status(200).json({ success: true, message: 'Password reset successful' });
   } catch (error) {
     console.log('error in resetPassword', error);
     res.status(400).json({ success: false, message: error.message });
@@ -179,11 +166,8 @@ export const resetPassword = async (req, res) => {
 export const checkAuth = async (req, res) => {
   try {
     const user = await User.findById(req.userId).select('-password');
-    if (!user) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'User not found' });
-    }
+    if (!user)
+      return res.status(400).json({ success: false, message: 'User not found' });
     res.status(200).json({ success: true, user });
   } catch (error) {
     console.log('error in checkAuth', error);
