@@ -15,7 +15,7 @@ const studentProfileSchema = new mongoose.Schema({
   address:  { type: String, required: true },
   location: { type: String, required: true },
   collegeName: { type: String, required: true },
-  citizenshipFront: { type: String, required: true }, // Cloudinary URL
+  citizenshipFront: { type: String, required: true }, 
   citizenshipBack:  { type: String, required: true }, // Cloudinary URL
   isProfileComplete: { type: Boolean, default: true },
 }, { timestamps: true });
