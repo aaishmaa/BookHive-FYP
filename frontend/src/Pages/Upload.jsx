@@ -17,7 +17,7 @@ const LEVEL_DATA = {
   },
   "High School (+2)": {
     classes: ["Class 11","Class 12"],
-    categories: ["Mathematics","Physics","Chemistry","Biology","English","Computer Science","Account","Economics","Other"],
+    categories: ["Mathematics","Physics","Chemistry","Biology","English","Nepali","Computer Science","Account","Economics","Other"],
   },
   Bachelor: {
     classes: ["1st Year","2nd Year","3rd Year","4th Year"],

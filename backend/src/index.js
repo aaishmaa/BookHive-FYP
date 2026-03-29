@@ -15,6 +15,8 @@ import notificationRoutes from './Routes/notification.route.js';
 import profileRoutes      from './Routes/profile.route.js'; 
 import topSellersRoutes from './Routes/topSeller.route.js';
 import chatRoutes         from './Routes/chat.route.js';
+import adminRoutes from './Routes/admin.route.js';
+
      
 
 dotenv.config();
@@ -49,6 +51,7 @@ app.use('/profile',       profileRoutes);
 app.use('/top-sellers', topSellersRoutes);
 app.use('/chat',          chatRoutes);                      
 app.use('/uploads',       express.static(path.join(process.cwd(), 'uploads')));
+app.use('/admin', adminRoutes);
 
 app.get('/', (req, res) => res.send('BookHive API is running!'));
 

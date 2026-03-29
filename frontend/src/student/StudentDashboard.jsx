@@ -166,16 +166,16 @@ const StudentDashboard = () => {
             </div>
             <div className="flex gap-3 flex-wrap">
               <button
+                onClick={() => navigate("/admin")}
+                className="px-4 py-2 bg-[#1C7C84] text-white rounded-lg text-sm font-medium hover:bg-[#146C70] transition"
+              >
+                Admin Dashboard
+              </button>
+              <button
                 onClick={() => navigate("/admin/students")}
                 className="px-4 py-2 bg-[#1C7C84] text-white rounded-lg text-sm font-medium hover:bg-[#146C70] transition"
               >
-                Manage Users
-              </button>
-              <button className="px-4 py-2 bg-[#1C7C84] text-white rounded-lg text-sm font-medium hover:bg-[#146C70] transition">
-                Add Books
-              </button>
-              <button className="px-4 py-2 bg-[#1C7C84] text-white rounded-lg text-sm font-medium hover:bg-[#146C70] transition">
-                View Reports
+                Review Applications
               </button>
             </div>
           </motion.div>

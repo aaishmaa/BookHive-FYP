@@ -1,79 +1,91 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Image, Smile } from "lucide-react";
+import { Send, Image, Smile, Loader } from "lucide-react";
+import { useChatStore } from "../store/chatStore";
+import { useAuthStore } from "../store/authStore";
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const CONTACTS = [
-  {
-    id: 1, name: "Priya Sharma", initial: "P", online: true, time: "2m",
-    lastMsg: "Is the book still available?",
-    messages: [
-      { id: 1, from: "them", text: "Hi! Is the Algorithms book still available?", time: "10:30 AM" },
-      { id: 2, from: "me",   text: "Yes, it is! Are you interested?",             time: "10:32 AM" },
-      { id: 3, from: "them", text: "Definitely! Can I see a few more pictures?",  time: "10:33 AM" },
-      { id: 4, from: "me",   text: "Sure, let me send some. The book is in great condition with minimal highlighting.", time: "10:35 AM" },
-      { id: 5, from: "them", text: "Is the price negotiable? I was thinking ₹400.", time: "10:38 AM" },
-    ],
-  },
-  {
-    id: 2, name: "Arjun Patel", initial: "A", online: false, time: "1h",
-    lastMsg: "Can you do ₹350?",
-    messages: [
-      { id: 1, from: "them", text: "Hey, I saw your listing for Computer Networks.", time: "9:10 AM" },
-      { id: 2, from: "me",   text: "Yes! It's in very good condition.",            time: "9:12 AM" },
-      { id: 3, from: "them", text: "Can you do ₹350?",                             time: "9:15 AM" },
-    ],
-  },
-  {
-    id: 3, name: "Neha Gupta", initial: "N", online: true, time: "3h",
-    lastMsg: "Thanks! I'll pick it up tomorrow",
-    messages: [
-      { id: 1, from: "me",   text: "Hi Neha, the book is ready for pickup.",       time: "8:00 AM" },
-      { id: 2, from: "them", text: "Thanks! I'll pick it up tomorrow",             time: "8:05 AM" },
-    ],
-  },
-  {
-    id: 4, name: "Karan Singh", initial: "K", online: false, time: "1d",
-    lastMsg: "What's the condition?",
-    messages: [
-      { id: 1, from: "them", text: "What's the condition of the book?",            time: "Yesterday" },
-      { id: 2, from: "me",   text: "It's good — a few pencil marks but readable.", time: "Yesterday" },
-    ],
-  },
-];
+const getInitial = (name) => name?.charAt(0).toUpperCase() || "U";
 
-const avatarColor = (initial) => {
-  const map = { P: "bg-[#1C7C84]", A: "bg-purple-500", N: "bg-amber-500", K: "bg-rose-500" };
-  return map[initial] || "bg-gray-500";
+const avatarColor = (name) => {
+  const colors = ["bg-[#1C7C84]", "bg-purple-500", "bg-amber-500", "bg-rose-500", "bg-blue-500", "bg-green-500"];
+  return colors[name?.charCodeAt(0) % colors.length] || "bg-gray-500";
+};
+
+const formatTime = (timestamp) => {
+  const date = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  if (date.toDateString() === today.toDateString()) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } else if (date.toDateString() === yesterday.toDateString()) {
+    return "Yesterday";
+  }
+  return date.toLocaleDateString();
+};
+
+const formatLastMsgTime = (timestamp) => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return "now";
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  return `${diffDays}d`;
 };
 
 // ─── Chat Page ───────────
 const ChatPage = () => {
-  const [contacts, setContacts]       = useState(CONTACTS);
-  const [activeId, setActiveId]       = useState(1);
-  const [input, setInput]             = useState("");
-  const bottomRef                     = useRef(null);
+  const { conversations, activeConversation, loading, error, fetchConversations, sendMessage: storeSendMessage, markAsRead } = useChatStore();
+  const { user } = useAuthStore();
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef(null);
 
-  const active = contacts.find(c => c.id === activeId);
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  useEffect(() => {
+    if (activeConversation) {
+      markAsRead(activeConversation._id);
+    }
+  }, [activeConversation, markAsRead]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeId, active?.messages?.length]);
+  }, [activeConversation?.messages?.length]);
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    const newMsg = { id: Date.now(), from: "me", text: input.trim(), time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) };
-    setContacts(prev => prev.map(c =>
-      c.id === activeId
-        ? { ...c, messages: [...c.messages, newMsg], lastMsg: input.trim(), time: "now" }
-        : c
-    ));
-    setInput("");
+  const sendMessage = async () => {
+    if (!input.trim() || !activeConversation || sending) return;
+    
+    setSending(true);
+    try {
+      await storeSendMessage(activeConversation._id, input);
+      setInput("");
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleKey = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
+
+  if (loading && conversations.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-50">
+        <Loader className="w-8 h-8 text-[#1C7C84] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full overflow-hidden bg-gray-50">
@@ -85,118 +97,152 @@ const ChatPage = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {contacts.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setActiveId(c.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition border-b border-gray-50 hover:bg-gray-50
-                ${activeId === c.id ? "bg-[#1C7C84]/8 border-l-[3px] border-l-[#1C7C84]" : "border-l-[3px] border-l-transparent"}`}
-            >
-              {/* Avatar */}
-              <div className="relative shrink-0">
-                <div className={`w-10 h-10 rounded-full ${avatarColor(c.initial)} flex items-center justify-center text-white text-[13px] font-bold`}>
-                  {c.initial}
-                </div>
-                {c.online && (
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
-                )}
-              </div>
+          {conversations.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-gray-400">
+              <p className="text-[13px]">No conversations yet</p>
+            </div>
+          ) : (
+            conversations.map((conv) => {
+              const otherUser = conv.participants.find(p => p._id !== user?._id);
+              const lastMsg = conv.messages[conv.messages.length - 1];
+              const isActive = activeConversation?._id === conv._id;
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className={`text-[13.5px] truncate ${activeId === c.id ? "font-semibold text-[#1C7C84]" : "font-semibold text-gray-800"}`}>
-                    {c.name}
-                  </p>
-                  <span className="text-[11px] text-gray-400 shrink-0 ml-1">{c.time}</span>
-                </div>
-                <p className="text-[12px] text-gray-400 truncate mt-0.5">{c.lastMsg}</p>
-              </div>
-            </button>
-          ))}
+              return (
+                <button
+                  key={conv._id}
+                  onClick={() => {
+                    const chatStore = useChatStore.getState();
+                    chatStore.setActiveConversation(conv);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition border-b border-gray-50 hover:bg-gray-50
+                    ${isActive ? "bg-[#1C7C84]/8 border-l-[3px] border-l-[#1C7C84]" : "border-l-[3px] border-l-transparent"}`}
+                >
+                  {/* Avatar */}
+                  <div className="relative shrink-0">
+                    <div className={`w-10 h-10 rounded-full ${avatarColor(otherUser?.name)} flex items-center justify-center text-white text-[13px] font-bold`}>
+                      {getInitial(otherUser?.name)}
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className={`text-[13.5px] truncate ${isActive ? "font-semibold text-[#1C7C84]" : "font-semibold text-gray-800"}`}>
+                        {otherUser?.name}
+                      </p>
+                      <span className="text-[11px] text-gray-400 shrink-0 ml-1">
+                        {formatLastMsgTime(conv.updatedAt)}
+                      </span>
+                    </div>
+                    <p className="text-[12px] text-gray-400 truncate mt-0.5">
+                      {lastMsg?.text || "No messages yet"}
+                    </p>
+                  </div>
+                </button>
+              );
+            })
+          )}
         </div>
       </div>
 
       {/* ── Chat Window ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {activeConversation ? (
+        <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Chat header */}
-        <div className="flex items-center gap-3 px-5 py-3.5 bg-white border-b border-gray-200 shrink-0">
-          <div className="relative">
-            <div className={`w-9 h-9 rounded-full ${avatarColor(active.initial)} flex items-center justify-center text-white text-[13px] font-bold`}>
-              {active.initial}
-            </div>
-            {active.online && (
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
-            )}
-          </div>
-          <div>
-            <p className="text-[14px] font-semibold text-gray-900 leading-tight">{active.name}</p>
-            <p className={`text-[11.5px] font-medium ${active.online ? "text-emerald-500" : "text-gray-400"}`}>
-              {active.online ? "Online" : "Offline"}
-            </p>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
-          <AnimatePresence initial={false}>
-            {active.messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className={`flex ${msg.from === "me" ? "justify-end" : "justify-start"}`}
-              >
-                <div className={`max-w-[60%] ${msg.from === "me" ? "items-end" : "items-start"} flex flex-col`}>
-                  <div
-                    className={`px-4 py-2.5 rounded-2xl text-[13.5px] leading-relaxed
-                      ${msg.from === "me"
-                        ? "bg-[#1C7C84] text-white rounded-tr-sm"
-                        : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm shadow-sm"}`}
-                  >
-                    {msg.text}
+          {/* Chat header */}
+          {(() => {
+            const otherUser = activeConversation.participants.find(p => p._id !== user?._id);
+            return (
+              <div className="flex items-center gap-3 px-5 py-3.5 bg-white border-b border-gray-200 shrink-0">
+                <div className="relative">
+                  <div className={`w-9 h-9 rounded-full ${avatarColor(otherUser?.name)} flex items-center justify-center text-white text-[13px] font-bold`}>
+                    {getInitial(otherUser?.name)}
                   </div>
-                  <span className="text-[11px] text-gray-400 mt-1 px-1">{msg.time}</span>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={bottomRef} />
-        </div>
+                <div>
+                  <p className="text-[14px] font-semibold text-gray-900 leading-tight">{otherUser?.name}</p>
+                  <p className="text-[11.5px] font-medium text-gray-400">Active now</p>
+                </div>
+              </div>
+            );
+          })()}
 
-        {/* Input bar */}
-        <div className="px-5 py-3.5 bg-white border-t border-gray-200 shrink-0">
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus-within:border-[#1C7C84] transition">
-            <button className="text-gray-400 hover:text-[#1C7C84] transition p-1">
-              <Image className="w-5 h-5" />
-            </button>
-            <button className="text-gray-400 hover:text-[#1C7C84] transition p-1">
-              <Smile className="w-5 h-5" />
-            </button>
-            <input
-              type="text"
-              placeholder="Type a message..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKey}
-              className="flex-1 bg-transparent outline-none text-[13.5px] text-gray-700 placeholder:text-gray-400 px-2"
-            />
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={sendMessage}
-              disabled={!input.trim()}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition
-                ${input.trim()
-                  ? "bg-[#1C7C84] hover:bg-[#155f65] text-white"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
-            >
-              <Send className="w-4 h-4" />
-            </motion.button>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-3">
+            <AnimatePresence initial={false}>
+              {activeConversation.messages.map((msg) => {
+                const isOwnMessage = msg.senderId._id === user?._id;
+                return (
+                  <motion.div
+                    key={msg._id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                  >
+                    <div className={`max-w-[60%] ${isOwnMessage ? "items-end" : "items-start"} flex flex-col`}>
+                      <div
+                        className={`px-4 py-2.5 rounded-2xl text-[13.5px] leading-relaxed
+                          ${isOwnMessage
+                            ? "bg-[#1C7C84] text-white rounded-tr-sm"
+                            : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm shadow-sm"}`}
+                      >
+                        {msg.text}
+                      </div>
+                      <span className="text-[11px] text-gray-400 mt-1 px-1">
+                        {formatTime(msg.timestamp)}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input bar */}
+          <div className="px-5 py-3.5 bg-white border-t border-gray-200 shrink-0">
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus-within:border-[#1C7C84] transition">
+              <button className="text-gray-400 hover:text-[#1C7C84] transition p-1">
+                <Image className="w-5 h-5" />
+              </button>
+              <button className="text-gray-400 hover:text-[#1C7C84] transition p-1">
+                <Smile className="w-5 h-5" />
+              </button>
+              <input
+                type="text"
+                placeholder="Type a message..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKey}
+                disabled={sending}
+                className="flex-1 bg-transparent outline-none text-[13.5px] text-gray-700 placeholder:text-gray-400 px-2 disabled:opacity-50"
+              />
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={sendMessage}
+                disabled={!input.trim() || sending}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition
+                  ${(input.trim() && !sending)
+                    ? "bg-[#1C7C84] hover:bg-[#155f65] text-white"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+              >
+                {sending ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </motion.button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <p className="text-gray-400 text-[14px]">Select a conversation to start messaging</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

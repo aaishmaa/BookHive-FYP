@@ -8,12 +8,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useBookStore }     from "../store/bookStore";
 import { useWishlistStore } from "../store/wishlistStore";
+import TopSellers from "../Components/TopSeller";
 
-const topSellers = [
-  { name: "Priya Sharma", rating: "4.9", books: "24 books", initial: "P" },
-  { name: "Arjun Patel",  rating: "4.8", books: "18 books", initial: "A" },
-  { name: "Sara Khan",    rating: "4.7", books: "15 books", initial: "S" },
-];
 
 const TABS = ["All", "Buy", "Rent", "Exchange", "Digital Notes"];
 
@@ -25,9 +21,9 @@ const LEVEL_DATA = {
 
 const CATEGORIES_BY_LEVEL = {
   "School":           ["Mathematics","Science","English","Nepali","Social Studies","Computer Science","Other"],
-  "High School (+2)": ["Mathematics","Physics","Chemistry","Biology","English","Computer Science","Account","Economics","Other"],
+  "High School (+2)": ["Mathematics","Physics","Chemistry","Biology","English","Nepali","Computer Science","Account","Economics","Other"],
   "Bachelor":         ["Computer Science / IT","Engineering","Management / BBA / BBS","Medical / Nursing","Law","Education","Science","Arts / Humanities","Other"],
-  "":                 ["Engineering","Medical","Management","Law","IT","Science","History","Fiction","Other"],
+  "":                 ["Engineering","Medical / Nursing","Management","Law","IT / Computer Science","Science","Mathematics","English","History","Fiction","Other"],
 };
 
 const typeStyle = {
@@ -234,6 +230,12 @@ function BookCard({ book, index, savedIds, onToggleSave }) {
               <MessageCircle className="w-[17px] h-[17px]" />
               <span className="text-[12.5px] text-gray-500">{book.comments ?? 0}</span>
             </button>
+            {/* Enquiries — how many people requested this book */}
+            {(book.enquiries ?? 0) > 0 && (
+              <span className="flex items-center gap-1 text-[12px] text-amber-500 font-medium">
+                🔥 {book.enquiries} {book.enquiries === 1 ? "request" : "requests"}
+              </span>
+            )}
             <button className="text-gray-400 hover:text-[#1C7C84] transition">
               <Share2 className="w-[17px] h-[17px]" />
             </button>
@@ -326,6 +328,7 @@ const Home = () => {
   };
 
   const recentUploads = books.slice(0, 3).map(b => ({
+    id:    b._id,
     title: b.title,
     time:  b.createdAt ? `${Math.floor((Date.now() - new Date(b.createdAt)) / 3600000)}h ago` : "recently",
   }));
@@ -453,9 +456,9 @@ const Home = () => {
             <h3 className="text-[13px] font-bold text-gray-800">Trending Categories</h3>
           </div>
           <div className="flex flex-wrap gap-2">
-            {["Engineering","Medical","Management","IT","Law"].map(c => (
+            {["Engineering","Medical","Management","IT","Law","Science","Mathematics"].map(c => (
               <span key={c}
-                onClick={() => setCategory(category === c ? "" : c)}
+                onClick={() => { setCategory(category === c ? "" : c); setActiveTab("All"); }}
                 className={`px-3 py-1 text-[12px] font-medium rounded-full cursor-pointer transition
                   ${category === c ? "bg-[#1C7C84] text-white" : "bg-gray-100 text-gray-600 hover:bg-[#1C7C84]/10 hover:text-[#1C7C84]"}`}>
                 {c}
@@ -463,21 +466,7 @@ const Home = () => {
             ))}
           </div>
         </div>
-        <div className="px-5 py-5 border-b border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-            <h3 className="text-[13px] font-bold text-gray-800">Top Sellers</h3>
-          </div>
-          {topSellers.map(s => (
-            <div key={s.name} className="flex items-center gap-3 mb-4 last:mb-0">
-              <div className="w-9 h-9 rounded-full bg-[#D1E8EA] flex items-center justify-center text-[#1C7C84] text-[13px] font-bold shrink-0">{s.initial}</div>
-              <div>
-                <p className="text-[13px] font-semibold text-gray-800 leading-tight">{s.name}</p>
-                <p className="text-[11.5px] text-gray-400 mt-0.5"><span className="text-amber-400">★</span> {s.rating} · {s.books}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <TopSellers />
         <div className="px-5 py-5">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-gray-400" />
@@ -486,8 +475,9 @@ const Home = () => {
           {recentUploads.length === 0
             ? <p className="text-[12px] text-gray-400">No recent uploads yet</p>
             : recentUploads.map(u => (
-              <div key={u.title} className="mb-3.5 last:mb-0">
-                <p className="text-[13px] font-semibold text-gray-800 leading-tight">{u.title}</p>
+              <div key={u.id} onClick={() => navigate(`/book/${u.id}`)}
+                className="mb-3.5 last:mb-0 cursor-pointer group">
+                <p className="text-[13px] font-semibold text-gray-800 leading-tight group-hover:text-[#1C7C84] transition truncate">{u.title}</p>
                 <p className="text-[11.5px] text-gray-400 mt-0.5">{u.time}</p>
               </div>
             ))
