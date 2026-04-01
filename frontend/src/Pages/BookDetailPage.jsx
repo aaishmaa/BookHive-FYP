@@ -7,13 +7,12 @@ import axios from "axios";
 import {
   ArrowLeft, User, BookOpen, Tag, MapPin,
   MessageCircle, ArrowLeftRight, Heart, Share2,
-  Eye, Calendar, Check, RefreshCcw, Loader,
+  Eye, Calendar, Check, RefreshCcw, Loader, X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const REQ_URL = import.meta.env.MODE === "development"
-  ? "http://localhost:5000/requests"
-  : "/requests";
+const REQ_URL   = import.meta.env.MODE === "development" ? "http://localhost:5000/requests" : "/requests";
+const BOOKS_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/books"    : "/books";
 
 const badgeBg = {
   "Like New": "bg-emerald-600", "Very Good": "bg-blue-600",
@@ -32,23 +31,182 @@ const statusColors = {
 const avatarColors = ["bg-[#1C7C84]","bg-purple-500","bg-amber-500","bg-rose-500","bg-blue-500"];
 const getColor = (name) => avatarColors[(name?.charCodeAt(0)||0) % avatarColors.length];
 
-// ── Request Modal ─────────────────────────────────────────────────────────────
-function RequestModal({ book, onClose, onSubmit, submitting }) {
-  const requestType = book.type === "Exchange" ? "Exchange" : "Borrow";
-  const [offerTitle, setOfferTitle] = useState("");
-  const [returnBy,   setReturnBy]   = useState("");
-  const [message,    setMessage]    = useState("");
-  const [error,      setError]      = useState("");
+// ── Exchange Modal — pick your own book ───────────────────────────────────────
+function ExchangeModal({ book, onClose, onSubmit, submitting }) {
+  const [myBooks,      setMyBooks]      = useState([]);
+  const [loadingBooks, setLoadingBooks] = useState(true);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [message,      setMessage]      = useState("");
+  const [error,        setError]        = useState("");
+
+  useEffect(() => {
+    axios.get(`${BOOKS_URL}/my`, { withCredentials: true })
+      .then(res => {
+        // Only show active exchange books (not the same book)
+        const available = (res.data.books || []).filter(
+          b => b.status === 'Active' && b._id !== book._id
+        );
+        setMyBooks(available);
+      })
+      .catch(() => setMyBooks([]))
+      .finally(() => setLoadingBooks(false));
+  }, []);
 
   const handleSubmit = async () => {
+    if (!selectedBook) { setError("Please select a book to offer."); return; }
     setError("");
-    if (requestType === "Exchange" && !offerTitle.trim()) {
-      setError("Please enter what you're offering in exchange."); return;
-    }
-    if (requestType === "Borrow" && !returnBy) {
-      setError("Please select a return date."); return;
-    }
-    await onSubmit({ type: requestType, offerTitle, returnBy, message });
+    await onSubmit({
+      type:           "Exchange",
+      offerBookId:    selectedBook._id,
+      offerBookTitle: selectedBook.title,
+      offerBookImg:   selectedBook.img || selectedBook.images?.[0] || '',
+      offer:          selectedBook.title,
+      message,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        onClick={e => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px] max-h-[85vh] overflow-y-auto">
+
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between rounded-t-2xl">
+          <div>
+            <h2 className="text-[16px] font-bold text-gray-900">Request Exchange</h2>
+            <p className="text-[12px] text-gray-400 mt-0.5 truncate max-w-[300px]">
+              for "{book.title}" · from {book.seller}
+            </p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+
+          {/* What they want */}
+          <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+            <img src={book.img || book.images?.[0] || "https://placehold.co/60x60"}
+              alt={book.title} className="w-12 h-14 rounded-lg object-cover shrink-0 border border-green-200" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-green-600 font-semibold uppercase tracking-wide">You want</p>
+              <p className="text-[13.5px] font-bold text-gray-900 truncate">{book.title}</p>
+              <p className="text-[12px] text-gray-400">by {book.author}</p>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center justify-center gap-3">
+            <div className="h-px flex-1 bg-gray-200" />
+            <ArrowLeftRight className="w-4 h-4 text-[#1C7C84]" />
+            <div className="h-px flex-1 bg-gray-200" />
+          </div>
+
+          {/* Pick your book */}
+          <div>
+            <p className="text-[13px] font-bold text-gray-700 mb-3">
+              Select your book to offer <span className="text-red-500">*</span>
+            </p>
+
+            {loadingBooks ? (
+              <div className="flex justify-center py-6">
+                <Loader className="w-5 h-5 animate-spin text-[#1C7C84]" />
+              </div>
+            ) : myBooks.length === 0 ? (
+              <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-[13px] text-gray-500 font-medium">No books available to offer</p>
+                <p className="text-[12px] text-gray-400 mt-1">Upload a book first to exchange</p>
+                <button onClick={() => { onClose(); }}
+                  className="mt-3 text-[12.5px] text-[#1C7C84] font-semibold hover:underline">
+                  + Upload a book
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+                {myBooks.map(b => (
+                  <div key={b._id} onClick={() => setSelectedBook(b)}
+                    className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition
+                      ${selectedBook?._id === b._id
+                        ? "border-[#1C7C84] bg-[#1C7C84]/5"
+                        : "border-gray-200 hover:border-gray-300 bg-white"}`}>
+                    <img src={b.img || b.images?.[0] || "https://placehold.co/60x60/1C7C84/white?text=B"}
+                      alt={b.title} className="w-10 h-12 rounded-lg object-cover shrink-0 border border-gray-100" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-gray-800 truncate">{b.title}</p>
+                      <p className="text-[11.5px] text-gray-400 truncate">{b.author}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{b.badge || "Good"}</span>
+                        <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
+                          b.type === 'Exchange' ? 'bg-emerald-50 text-emerald-600' :
+                          b.type === 'Rent'     ? 'bg-purple-50 text-purple-500' : 'bg-blue-50 text-blue-600'}`}>
+                          {b.type}
+                        </span>
+                      </div>
+                    </div>
+                    {selectedBook?._id === b._id && (
+                      <div className="w-6 h-6 rounded-full bg-[#1C7C84] flex items-center justify-center shrink-0">
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Selected preview */}
+          {selectedBook && (
+            <div className="flex items-center gap-2 bg-[#1C7C84]/5 border border-[#1C7C84]/20 rounded-xl px-4 py-3">
+              <ArrowLeftRight className="w-4 h-4 text-[#1C7C84] shrink-0" />
+              <p className="text-[12.5px] text-gray-700">
+                Offering <span className="font-bold text-[#1C7C84]">"{selectedBook.title}"</span> in exchange
+              </p>
+            </div>
+          )}
+
+          {/* Message */}
+          <div>
+            <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">
+              Message <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea rows={2} placeholder="Add a note to the seller..."
+              value={message} onChange={e => setMessage(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[#1C7C84] transition resize-none" />
+          </div>
+
+          {error && <p className="text-[12px] text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
+
+          <div className="flex gap-2">
+            <button onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">
+              Cancel
+            </button>
+            <button onClick={handleSubmit} disabled={submitting || !selectedBook}
+              className="flex-1 py-2.5 rounded-xl bg-[#1C7C84] hover:bg-[#155f65] text-white text-[13px] font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60">
+              {submitting ? <Loader className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
+              Send Exchange Request
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ── Borrow Modal ──────────────────────────────────────────────────────────────
+function BorrowModal({ book, onClose, onSubmit, submitting }) {
+  const [returnBy, setReturnBy] = useState("");
+  const [message,  setMessage]  = useState("");
+  const [error,    setError]    = useState("");
+
+  const handleSubmit = async () => {
+    if (!returnBy) { setError("Please select a return date."); return; }
+    setError("");
+    await onSubmit({ type: "Borrow", returnBy, message });
   };
 
   return (
@@ -59,32 +217,17 @@ function RequestModal({ book, onClose, onSubmit, submitting }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-[420px] p-6">
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h2 className="text-[16px] font-bold text-gray-900">
-              {requestType === "Exchange" ? "Request Exchange" : "Request to Borrow"}
-            </h2>
-            <p className="text-[12px] text-gray-400 mt-0.5 max-w-[300px] truncate">
-              {book.title} · from {book.seller}
-            </p>
+            <h2 className="text-[16px] font-bold text-gray-900">Request to Borrow</h2>
+            <p className="text-[12px] text-gray-400 mt-0.5 truncate max-w-[300px]">{book.title} · from {book.seller}</p>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition text-xl leading-none">×</button>
         </div>
-
-        {requestType === "Exchange" && (
-          <div className="mb-4">
-            <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">Your Offer <span className="text-red-500">*</span></label>
-            <input type="text" placeholder="e.g. Computer Networks by Tanenbaum"
-              value={offerTitle} onChange={e => setOfferTitle(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[#1C7C84] transition" />
-          </div>
-        )}
-        {requestType === "Borrow" && (
-          <div className="mb-4">
-            <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">Return By <span className="text-red-500">*</span></label>
-            <input type="date" value={returnBy} min={new Date().toISOString().split("T")[0]}
-              onChange={e => setReturnBy(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[#1C7C84] transition" />
-          </div>
-        )}
+        <div className="mb-4">
+          <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">Return By <span className="text-red-500">*</span></label>
+          <input type="date" value={returnBy} min={new Date().toISOString().split("T")[0]}
+            onChange={e => setReturnBy(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[#1C7C84] transition" />
+        </div>
         <div className="mb-5">
           <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">Message <span className="text-gray-400 font-normal">(optional)</span></label>
           <textarea rows={3} placeholder="Add a note to the seller..."
@@ -95,7 +238,7 @@ function RequestModal({ book, onClose, onSubmit, submitting }) {
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
           <button onClick={handleSubmit} disabled={submitting}
-            className="flex-1 py-2.5 rounded-xl bg-[#1C7C84] hover:bg-[#155f65] text-white text-[13px] font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60">
+            className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-[13px] font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60">
             {submitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Check className="w-4 h-4" /> Send Request</>}
           </button>
         </div>
@@ -112,14 +255,14 @@ const BookDetailPage = () => {
   const { sendRequest } = useRequestStore();
   const { user, isAuthenticated } = useAuthStore();
 
-  const [activeImg,     setActiveImg]     = useState(0);
-  const [liked,         setLiked]         = useState(false);
-  const [showModal,     setShowModal]     = useState(false);
-  const [submitting,    setSubmitting]    = useState(false);
-  const [requestSent,   setRequestSent]   = useState(false);
-  const [requestError,  setRequestError]  = useState("");
-  const [bookRequests,  setBookRequests]  = useState([]);
-  const [reqLoading,    setReqLoading]    = useState(false);
+  const [activeImg,    setActiveImg]    = useState(0);
+  const [liked,        setLiked]        = useState(false);
+  const [showModal,    setShowModal]    = useState(null); // 'exchange' | 'borrow'
+  const [submitting,   setSubmitting]   = useState(false);
+  const [requestSent,  setRequestSent]  = useState(false);
+  const [requestError, setRequestError] = useState("");
+  const [bookRequests, setBookRequests] = useState([]);
+  const [reqLoading,   setReqLoading]   = useState(false);
 
   useEffect(() => { if (id) fetchBookById(id); }, [id]);
 
@@ -144,9 +287,9 @@ const BookDetailPage = () => {
     setRequestError("");
     try {
       await sendRequest({ bookId: currentBook._id, senderName: user?.name || "Unknown", ...data });
-      setShowModal(false);
+      setShowModal(null);
       setRequestSent(true);
-      fetchBookRequests(currentBook._id); // refresh requester list
+      fetchBookRequests(currentBook._id);
     } catch (err) {
       setRequestError(err?.response?.data?.msg || err?.message || "Failed to send request.");
     } finally {
@@ -177,8 +320,12 @@ const BookDetailPage = () => {
   return (
     <div className="h-full overflow-y-auto bg-gray-50 px-6 py-8">
       <AnimatePresence>
-        {showModal && (
-          <RequestModal book={currentBook} onClose={() => setShowModal(false)}
+        {showModal === 'exchange' && (
+          <ExchangeModal book={currentBook} onClose={() => setShowModal(null)}
+            onSubmit={handleRequest} submitting={submitting} />
+        )}
+        {showModal === 'borrow' && (
+          <BorrowModal book={currentBook} onClose={() => setShowModal(null)}
             onSubmit={handleRequest} submitting={submitting} />
         )}
       </AnimatePresence>
@@ -193,10 +340,8 @@ const BookDetailPage = () => {
           className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex flex-col lg:flex-row">
 
-            {/* ── Left: image + requesters panel ── */}
+            {/* ── Left ── */}
             <div className="lg:w-[42%] shrink-0 flex flex-col">
-
-              {/* Main image */}
               <div className="relative w-full h-72 lg:h-[300px] overflow-hidden bg-gray-100">
                 <img src={images[activeImg]} alt={currentBook.title} className="w-full h-full object-cover" />
                 {currentBook.badge && (
@@ -210,7 +355,6 @@ const BookDetailPage = () => {
                 </button>
               </div>
 
-              {/* Thumbnails */}
               {images.length > 1 && (
                 <div className="flex gap-2 p-3 overflow-x-auto">
                   {images.map((img, i) => (
@@ -223,7 +367,7 @@ const BookDetailPage = () => {
                 </div>
               )}
 
-              {/* ── Requesters Panel ── */}
+              {/* Requesters panel */}
               <div className="border-t border-gray-100 p-4 flex-1">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -237,26 +381,15 @@ const BookDetailPage = () => {
                   </span>
                 </div>
 
-                {/* Stats */}
                 {bookRequests.length > 0 && (
                   <div className="flex gap-2 mb-3 flex-wrap">
-                    {acceptedCount > 0 && (
-                      <span className="text-[10.5px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600">
-                        ✓ {acceptedCount} accepted
-                      </span>
-                    )}
-                    {pendingCount > 0 && (
-                      <span className="text-[10.5px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600">
-                        ⏳ {pendingCount} pending
-                      </span>
-                    )}
+                    {acceptedCount > 0 && <span className="text-[10.5px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600">✓ {acceptedCount} accepted</span>}
+                    {pendingCount  > 0 && <span className="text-[10.5px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600">⏳ {pendingCount} pending</span>}
                   </div>
                 )}
 
                 {reqLoading ? (
-                  <div className="flex justify-center py-4">
-                    <Loader className="w-5 h-5 animate-spin text-[#1C7C84]" />
-                  </div>
+                  <div className="flex justify-center py-4"><Loader className="w-5 h-5 animate-spin text-[#1C7C84]" /></div>
                 ) : bookRequests.length === 0 ? (
                   <div className="text-center py-4 text-gray-400">
                     <p className="text-[12px]">No requests yet</p>
@@ -272,11 +405,11 @@ const BookDetailPage = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[12.5px] font-semibold text-gray-800 truncate">{req.from}</p>
-                          {req.offer && (
-                            <p className="text-[11px] text-gray-400 truncate">
-                              {currentBook.type === "Exchange" ? "Offers: " : ""}{req.offer}
-                            </p>
-                          )}
+                          {req.offerBookTitle ? (
+                            <p className="text-[11px] text-[#1C7C84] font-medium truncate">📚 Offers: {req.offerBookTitle}</p>
+                          ) : req.offer ? (
+                            <p className="text-[11px] text-gray-400 truncate">{req.offer}</p>
+                          ) : null}
                           <p className="text-[10.5px] text-gray-300">{req.time}</p>
                         </div>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${statusColors[req.status] || "bg-gray-100 text-gray-500"}`}>
@@ -289,7 +422,7 @@ const BookDetailPage = () => {
               </div>
             </div>
 
-            {/* ── Right: details ── */}
+            {/* ── Right ── */}
             <div className="flex-1 p-6 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <span className={`text-xs font-semibold px-3 py-1 rounded-full ${typeStyle[currentBook.type] ?? "bg-gray-100 text-gray-500"}`}>
@@ -337,7 +470,6 @@ const BookDetailPage = () => {
                 </div>
               )}
 
-              {/* Action Buttons */}
               <div className="flex flex-col gap-2.5 mt-auto pt-2">
                 {requestSent && (
                   <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
@@ -367,13 +499,13 @@ const BookDetailPage = () => {
                       </button>
                     )}
                     {currentBook.type === "Rent" && (
-                      <button onClick={() => isAuthenticated ? setShowModal(true) : navigate("/login")}
+                      <button onClick={() => isAuthenticated ? setShowModal('borrow') : navigate("/login")}
                         className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
                         <BookOpen className="w-4 h-4" /> Request to Borrow
                       </button>
                     )}
                     {currentBook.type === "Exchange" && (
-                      <button onClick={() => isAuthenticated ? setShowModal(true) : navigate("/login")}
+                      <button onClick={() => isAuthenticated ? setShowModal('exchange') : navigate("/login")}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
                         <ArrowLeftRight className="w-4 h-4" /> Request Exchange
                       </button>

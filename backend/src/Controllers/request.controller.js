@@ -11,24 +11,27 @@ const timeAgo = (d) => {
 };
 
 const fmt = (r) => ({
-  id:         r._id,
-  _id:        r._id,
-  from:       r.fromUserName,
-  fi:         r.fromUserName?.[0]?.toUpperCase() || "?",
-  book:       r.bookTitle,
-  bookImg:    r.bookImg || '',
-  bookId:     r.bookId,           // ← for book link in Requests page
-  type:       r.type,
-  offer:      r.offer || '',
-  returnBy:   r.returnBy,
-  message:    r.message || '',
-  time:       timeAgo(r.createdAt),
-  status:     r.status,
-  fromUserId: r.fromUserId,
-  toUserId:   r.toUserId,
+  id:             r._id,
+  _id:            r._id,
+  from:           r.fromUserName,
+  fi:             r.fromUserName?.[0]?.toUpperCase() || "?",
+  book:           r.bookTitle,
+  bookImg:        r.bookImg        || '',
+  bookId:         r.bookId,
+  offerBookId:    r.offerBookId    || null,
+  offerBookTitle: r.offerBookTitle || '',
+  offerBookImg:   r.offerBookImg   || '',
+  type:           r.type,
+  offer:          r.offer          || '',
+  returnBy:       r.returnBy,
+  message:        r.message        || '',
+  time:           timeAgo(r.createdAt),
+  status:         r.status,
+  fromUserId:     r.fromUserId,
+  toUserId:       r.toUserId,
 });
 
-// ── GET /requests — received ──────────────────────────────────────────────────
+// ── GET /requests ─────────────────────────────────────────────────────────────
 export const getMyRequests = async (req, res) => {
   try {
     const requests = await Request.find({ toUserId: req.userId }).sort({ createdAt: -1 });
@@ -51,7 +54,11 @@ export const getSentRequests = async (req, res) => {
 // ── POST /requests ────────────────────────────────────────────────────────────
 export const createRequest = async (req, res) => {
   try {
-    const { bookId, type, offerTitle, returnBy, message, senderName } = req.body;
+    const {
+      bookId, type, offerTitle,
+      offerBookId, offerBookTitle, offerBookImg,
+      returnBy, message, senderName,
+    } = req.body;
 
     const book = await Book.findById(bookId);
     if (!book) return res.status(404).json({ msg: 'Book not found' });
@@ -62,32 +69,42 @@ export const createRequest = async (req, res) => {
     if (existing)
       return res.status(400).json({ msg: 'You already have a pending request for this book' });
 
-    let offerStr = offerTitle || '';
+    // Validate offered book belongs to requester
+    if (type === 'Exchange' && offerBookId) {
+      const offerBook = await Book.findById(offerBookId);
+      if (!offerBook) return res.status(404).json({ msg: 'Offered book not found' });
+      if (offerBook.userId.toString() !== req.userId)
+        return res.status(403).json({ msg: "You can only offer your own books" });
+    }
+
+    let offerStr = offerBookTitle || offerTitle || '';
     if (!offerStr && returnBy)
       offerStr = `Return by ${new Date(returnBy).toLocaleDateString()}`;
 
     const request = await Request.create({
-      fromUserId:   req.userId,
-      fromUserName: senderName || req.userName || 'Unknown',
-      toUserId:     book.userId,
+      fromUserId:     req.userId,
+      fromUserName:   senderName || req.userName || 'Unknown',
+      toUserId:       book.userId,
       bookId,
-      bookTitle:    book.title,
-      bookImg:      book.img || book.images?.[0] || '',
+      bookTitle:      book.title,
+      bookImg:        book.img || book.images?.[0] || '',
+      offerBookId:    offerBookId    || null,
+      offerBookTitle: offerBookTitle || '',
+      offerBookImg:   offerBookImg   || '',
       type,
-      offer:        offerStr,
-      returnBy:     returnBy || null,
-      message:      message  || '',
+      offer:          offerStr,
+      returnBy:       returnBy || null,
+      message:        message  || '',
     });
 
     await Book.findByIdAndUpdate(bookId, { $inc: { enquiries: 1 } });
 
-    // ── Notify book owner ──────────────────────────────────────────────────────
-    await createNotif(
-      book.userId,
-      'request',
-      `📩 ${senderName || req.userName} sent a ${type} request for "${book.title}"`,
-      '/requests'
-    );
+    // Notify book owner
+    const notifText = type === 'Exchange' && offerBookTitle
+      ? `📩 ${senderName || req.userName} wants to exchange "${book.title}" for "${offerBookTitle}"`
+      : `📩 ${senderName || req.userName} sent a ${type} request for "${book.title}"`;
+
+    await createNotif(book.userId, 'request', notifText, '/requests');
 
     res.status(201).json({ request: fmt(request) });
   } catch (err) {
@@ -96,7 +113,7 @@ export const createRequest = async (req, res) => {
   }
 };
 
-// ── PATCH /requests/:id — accept or decline ───────────────────────────────────
+// ── PATCH /requests/:id ───────────────────────────────────────────────────────
 export const updateRequestStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -113,15 +130,32 @@ export const updateRequestStatus = async (req, res) => {
     request.status = status;
     await request.save();
 
-    // ── Notify the requester ───────────────────────────────────────────────────
-    await createNotif(
-      request.fromUserId,
-      status === 'Accepted' ? 'request' : 'system',
-      status === 'Accepted'
-        ? `✅ Your ${request.type} request for "${request.bookTitle}" was accepted!`
-        : `❌ Your ${request.type} request for "${request.bookTitle}" was declined.`,
-      '/requests'
-    );
+    // If exchange accepted → mark both books as Sold
+    if (status === 'Accepted' && request.type === 'Exchange') {
+      await Book.findByIdAndUpdate(request.bookId, { status: 'Sold' });
+      if (request.offerBookId)
+        await Book.findByIdAndUpdate(request.offerBookId, { status: 'Sold' });
+
+      await createNotif(
+        request.fromUserId, 'request',
+        `✅ Exchange accepted! "${request.bookTitle}" ↔ "${request.offerBookTitle}" — both books marked as exchanged.`,
+        '/requests'
+      );
+      await createNotif(
+        request.toUserId, 'sale',
+        `🔄 Exchange complete! You gave "${request.bookTitle}", received "${request.offerBookTitle}".`,
+        '/my-listings'
+      );
+    } else {
+      await createNotif(
+        request.fromUserId,
+        status === 'Accepted' ? 'request' : 'system',
+        status === 'Accepted'
+          ? `✅ Your ${request.type} request for "${request.bookTitle}" was accepted!`
+          : `❌ Your ${request.type} request for "${request.bookTitle}" was declined.`,
+        '/requests'
+      );
+    }
 
     res.json({ request: fmt(request) });
   } catch (err) {
@@ -129,7 +163,7 @@ export const updateRequestStatus = async (req, res) => {
   }
 };
 
-// ── DELETE /requests/:id — cancel ─────────────────────────────────────────────
+// ── DELETE /requests/:id ──────────────────────────────────────────────────────
 export const deleteRequest = async (req, res) => {
   try {
     const request = await Request.findById(req.params.id);
@@ -138,7 +172,6 @@ export const deleteRequest = async (req, res) => {
       return res.status(403).json({ msg: 'Not authorized' });
     if (request.status !== 'Pending')
       return res.status(400).json({ msg: 'Can only cancel pending requests' });
-
     await request.deleteOne();
     res.json({ msg: 'Request cancelled' });
   } catch (err) {
@@ -146,26 +179,25 @@ export const deleteRequest = async (req, res) => {
   }
 };
 
-// ── GET /requests/book/:bookId — get all requests for a specific book ──────────
-// Used by BookDetailPage to show who's interested
+// ── GET /requests/book/:bookId ────────────────────────────────────────────────
 export const getBookRequests = async (req, res) => {
   try {
     const requests = await Request.find({ bookId: req.params.bookId })
-      .sort({ createdAt: -1 })
-      .limit(10);
+      .sort({ createdAt: -1 }).limit(10);
     res.json({
       requests: requests.map(r => ({
-        id:          r._id,
-        from:        r.fromUserName,
-        fi:          r.fromUserName?.[0]?.toUpperCase() || "?",
-        type:        r.type,
-        offer:       r.offer || '',
-        status:      r.status,
-        time:        timeAgo(r.createdAt),
+        id:             r._id,
+        from:           r.fromUserName,
+        fi:             r.fromUserName?.[0]?.toUpperCase() || "?",
+        type:           r.type,
+        offer:          r.offer          || '',
+        offerBookTitle: r.offerBookTitle || '',
+        offerBookImg:   r.offerBookImg   || '',
+        status:         r.status,
+        time:           timeAgo(r.createdAt),
       }))
     });
   } catch (err) {
     res.status(500).json({ msg: err.message });
   }
 };
-
