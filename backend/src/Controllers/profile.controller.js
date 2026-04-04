@@ -40,3 +40,15 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 };
+
+// ── GET /profile/user/:userId — public profile ────────────────────────────────
+export const getPublicProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId).select('-password -resetPasswordToken -resetPasswordExpires -verificationToken -verificationTokenExpires');
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+};
+ 

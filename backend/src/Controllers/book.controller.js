@@ -1,13 +1,15 @@
-import { Book } from '../models/book.model.js';
+import { Book } from '../Models/book.model.js';
+import { createNotif } from './notification.controller.js';
 
 export const getBooks = async (req, res) => {
   try {
-    const { type, search, category, level, classYear } = req.query;
+    const { type, search, category, level, classYear, sellerId } = req.query;
     const query = { status: 'Active' };
     if (type)      query.type      = type;
     if (category)  query.category  = category;
     if (level)     query.level     = level;
-    if (classYear) query.classYear = classYear;
+    if (classYear)  query.classYear = classYear;
+    if (sellerId)   query.userId    = sellerId;
     if (search) {
       query.$or = [
         { title:  { $regex: search, $options: 'i' } },
@@ -38,7 +40,6 @@ export const getBookById = async (req, res) => {
     await Book.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
     res.json({ book });
   } catch (err) {
-    // Handle invalid ObjectId format gracefully
     res.status(404).json({ msg: 'Book not found' });
   }
 };
@@ -48,6 +49,7 @@ export const createBook = async (req, res) => {
     const { title, author, level, classYear, category, price, type, badge, description, seller } = req.body;
     const images = req.files?.map(f => f.path) || [];
     const img    = images[0] || '';
+
     const book = await Book.create({
       userId:    req.userId,
       seller:    seller    || 'Unknown',
@@ -59,6 +61,15 @@ export const createBook = async (req, res) => {
       images, img,
       status: 'Active',
     });
+
+    // ── Notify seller that listing is live ─────────────────────────────────────
+    await createNotif(
+      req.userId,
+      'sale',
+      `📚 Your listing "${title}" is now live on BookHive!`,
+      `/book/${book._id}`
+    );
+
     res.status(201).json({ book });
   } catch (err) {
     console.error("❌ CREATE BOOK ERROR:", err.message);
@@ -70,15 +81,25 @@ export const updateBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ msg: 'Book not found' });
-
-    // Guard against books saved with null userId (old broken uploads)
     if (book.userId && book.userId.toString() !== req.userId)
       return res.status(403).json({ msg: 'Not authorized' });
 
     const allowed = ['status','price','title','author','description','category','badge','level','classYear'];
     const updates = {};
     allowed.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+
     const updated = await Book.findByIdAndUpdate(req.params.id, { $set: updates }, { new: true });
+
+    // ── Notify when marked as Sold ─────────────────────────────────────────────
+    if (req.body.status === 'Sold') {
+      await createNotif(
+        req.userId,
+        'sale',
+        `🎉 Your book "${book.title}" has been marked as Sold!`,
+        '/my-listings'
+      );
+    }
+
     res.json({ book: updated });
   } catch (err) {
     res.status(500).json({ msg: err.message });
@@ -89,11 +110,8 @@ export const deleteBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
     if (!book) return res.status(404).json({ msg: 'Book not found' });
-
-    // Guard against books saved with null userId (old broken uploads)
     if (book.userId && book.userId.toString() !== req.userId)
       return res.status(403).json({ msg: 'Not authorized' });
-
     await book.deleteOne();
     res.json({ msg: 'Deleted successfully' });
   } catch (err) {

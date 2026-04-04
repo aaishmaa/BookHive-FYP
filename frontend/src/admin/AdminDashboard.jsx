@@ -80,6 +80,145 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+
+// ── Books Grouped by Category ─────────────────────────────────────────────────
+const BooksGrouped = ({ books, isLoading, deletingId, onDelete }) => {
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [search,         setSearch]         = useState("");
+  const [typeFilter,     setTypeFilter]     = useState("All");
+
+  const toggleGroup = (key) => setExpandedGroups(p => ({ ...p, [key]: !p[key] }));
+
+  // Filter books
+  const filtered = books.filter(b => {
+    const matchSearch = !search ||
+      b.title?.toLowerCase().includes(search.toLowerCase()) ||
+      b.seller?.toLowerCase().includes(search.toLowerCase());
+    const matchType = typeFilter === "All" || b.type === typeFilter;
+    return matchSearch && matchType;
+  });
+
+  // Group by category
+  const grouped = filtered.reduce((acc, book) => {
+    const key = book.category || "Uncategorized";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(book);
+    return acc;
+  }, {});
+
+  const sortedGroups = Object.entries(grouped).sort((a, b) => b[1].length - a[1].length);
+
+  if (isLoading) return (
+    <div className="flex justify-center py-16"><Loader className="w-7 h-7 animate-spin text-[#1C7C84]" /></div>
+  );
+
+  if (books.length === 0) return (
+    <div className="text-center py-16 text-gray-400">
+      <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
+      <p>No books found</p>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Search + filter bar */}
+      <div className="flex gap-3 mb-5 flex-wrap">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-2.5 flex-1 max-w-sm">
+          <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input type="text" placeholder="Search title or seller..."
+            value={search} onChange={e => setSearch(e.target.value)}
+            className="outline-none text-[13px] text-gray-700 w-full bg-transparent" />
+        </div>
+        <div className="flex gap-2">
+          {["All","Sell","Rent","Exchange"].map(t => (
+            <button key={t} onClick={() => setTypeFilter(t)}
+              className={`px-4 py-2 rounded-lg text-[12.5px] font-semibold border transition
+                ${typeFilter === t ? "bg-[#1C7C84] text-white border-[#1C7C84]" : "bg-white text-gray-600 border-gray-200 hover:border-[#1C7C84]"}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+        <div className="text-[12.5px] text-gray-500 flex items-center">
+          {filtered.length} books · {sortedGroups.length} categories
+        </div>
+      </div>
+
+      {/* Category groups */}
+      <div className="flex flex-col gap-3">
+        {sortedGroups.map(([category, catBooks]) => {
+          const isOpen    = expandedGroups[category];
+          const activeCount = catBooks.filter(b => b.status === "Active").length;
+          const soldCount   = catBooks.filter(b => b.status === "Sold").length;
+
+          return (
+            <div key={category} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+              {/* Group header */}
+              <button onClick={() => toggleGroup(category)}
+                className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition text-left">
+                <div className="w-10 h-10 rounded-lg bg-[#1C7C84]/10 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-5 h-5 text-[#1C7C84]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-bold text-gray-900">{category}</p>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="text-[11.5px] text-gray-500">{catBooks.length} total</span>
+                    {activeCount > 0 && <span className="text-[11px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">✓ {activeCount} active</span>}
+                    {soldCount   > 0 && <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{soldCount} sold</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[12px] font-bold text-[#1C7C84] bg-[#1C7C84]/10 px-3 py-1 rounded-full">
+                    {catBooks.length} books
+                  </span>
+                  <svg className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </button>
+
+              {/* Books list */}
+              {isOpen && (
+                <div className="border-t border-gray-100">
+                  {catBooks.map((book, i) => (
+                    <div key={book._id}
+                      className={`flex items-center gap-4 px-5 py-3 ${i !== catBooks.length-1 ? "border-b border-gray-50" : ""} hover:bg-gray-50 transition`}>
+                      <img src={book.img || book.images?.[0] || "https://placehold.co/60x60/1C7C84/white?text=B"}
+                        alt={book.title} className="w-10 h-12 rounded-lg object-cover shrink-0 border border-gray-100" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-bold text-gray-900 truncate">{book.title}</p>
+                        <p className="text-[11.5px] text-gray-400">{book.seller} · {book.price}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
+                          book.type === "Exchange" ? "bg-emerald-50 text-emerald-600" :
+                          book.type === "Rent"     ? "bg-purple-50 text-purple-500" : "bg-blue-50 text-blue-600"}`}>
+                          {book.type}
+                        </span>
+                        <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
+                          book.status === "Active" ? "bg-green-50 text-green-600" :
+                          book.status === "Sold"   ? "bg-gray-100 text-gray-500" : "bg-red-50 text-red-400"}`}>
+                          {book.status}
+                        </span>
+                        <button onClick={() => onDelete(book._id)} disabled={deletingId === book._id}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
+                          {deletingId === book._id ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // ── AdminDashboard ────────────────────────────────────────────────────────────
 const AdminDashboard = () => {
   const navigate  = useNavigate();
@@ -230,36 +369,12 @@ const AdminDashboard = () => {
 
           {/* ── Books ── */}
           {active === "books" && (
-            <div className="flex flex-col gap-3">
-              {isLoading ? (
-                <div className="flex justify-center py-16"><Loader className="w-7 h-7 animate-spin text-[#1C7C84]" /></div>
-              ) : books.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                  <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No books found</p>
-                </div>
-              ) : books.map((book, i) => (
-                <motion.div key={book._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center gap-4 shadow-sm">
-                  <img src={book.img || book.images?.[0] || "https://placehold.co/60x60/1C7C84/white?text=B"}
-                    alt={book.title} className="w-12 h-14 rounded-lg object-cover shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13.5px] font-bold text-gray-900 truncate">{book.title}</p>
-                    <p className="text-[12px] text-gray-400">{book.seller} · {book.type} · {book.price}</p>
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                      book.status === 'Active' ? 'bg-green-50 text-green-600' :
-                      book.status === 'Sold'   ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-400'}`}>
-                      {book.status}
-                    </span>
-                  </div>
-                  <button onClick={() => handleDeleteBook(book._id)} disabled={deletingId === book._id}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
-                    {deletingId === book._id ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                  </button>
-                </motion.div>
-              ))}
-            </div>
+            <BooksGrouped
+              books={books}
+              isLoading={isLoading}
+              deletingId={deletingId}
+              onDelete={handleDeleteBook}
+            />
           )}
 
           {/* ── Users ── */}

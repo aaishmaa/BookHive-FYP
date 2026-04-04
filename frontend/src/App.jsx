@@ -28,6 +28,7 @@ import RentPage          from './Pages/rent';
 import ExchangePage      from './Pages/Exchange';
 import ProfilePage       from './Pages/Profile';
 import BookDetailPage    from './Pages/BookDetailPage';
+import PublicProfile     from './Pages/PublicProfile';
 import BrowsePage        from './Pages/Browse';
 import MyListings        from './Pages/MyListings';
 import Requests          from './Pages/Requests';
@@ -134,6 +135,7 @@ function App() {
         <Route path="/exchange"      element={<P><ExchangePage /></P>} />
         <Route path="/profile"       element={<P><ProfilePage /></P>} />
         <Route path="/book/:id"      element={<P><BookDetailPage /></P>} />
+        <Route path="/user/:userId"   element={<P><PublicProfile /></P>} />
 
         {/* ── Admin protected routes ── */}
         <Route path="/admin"          element={<A><AdminDashboard /></A>} />

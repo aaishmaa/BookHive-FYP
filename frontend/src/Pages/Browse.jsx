@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {Search, Heart, MessageCircle, Share2, Bookmark,ChevronDown, SlidersHorizontal, TrendingUp, Star, Clock, X,} from "lucide-react";
+import {
+  Search, Heart, MessageCircle, Share2, Bookmark,
+  ChevronDown, SlidersHorizontal, TrendingUp, Star, Clock, X,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBookStore }     from "../store/bookStore";
 import { useWishlistStore } from "../store/wishlistStore";
@@ -159,10 +162,11 @@ function BookCard({ book, index, savedIds, onToggleSave }) {
       className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
 
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[#D1E8EA] flex items-center justify-center text-[#1C7C84] text-xs font-bold shrink-0">{initials}</div>
+        <div className="flex items-center gap-2.5 cursor-pointer group"
+          onClick={e => { e.stopPropagation(); if (book.userId) navigate(`/user/${book.userId}`); }}>
+          <div className="w-8 h-8 rounded-full bg-[#D1E8EA] flex items-center justify-center text-[#1C7C84] text-xs font-bold shrink-0 group-hover:ring-2 group-hover:ring-[#1C7C84] transition">{initials}</div>
           <div>
-            <p className="text-[13.5px] font-semibold text-gray-800 leading-tight">{book.seller}</p>
+            <p className="text-[13.5px] font-semibold text-gray-800 leading-tight group-hover:text-[#1C7C84] transition">{book.seller}</p>
             <p className="text-[11.5px] text-gray-400">{timeAgo(book.createdAt)}</p>
           </div>
         </div>
