@@ -14,30 +14,45 @@ export const useRequestStore = create((set) => ({
   isLoading:    false,
   error:        null,
 
-  // ── Fetch received ──────────────────────────────────────────────────────────
-  fetchRequests: async () => {
+  // ── Fetch BOTH at once — avoids race condition ──────────────────────────────
+  fetchAllRequests: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await axios.get(API_URL);
-      set({ requests: res.data.requests, isLoading: false });
+      const [receivedRes, sentRes] = await Promise.all([
+        axios.get(API_URL),
+        axios.get(`${API_URL}/sent`),
+      ]);
+      set({
+        requests:     receivedRes.data.requests || [],
+        sentRequests: sentRes.data.requests     || [],
+        isLoading:    false,
+      });
     } catch (err) {
       set({ error: err.response?.data?.msg || "Error fetching requests", isLoading: false });
     }
   },
 
-  // ── Fetch sent ──────────────────────────────────────────────────────────────
+  // ── Fetch received only ─────────────────────────────────────────────────────
+  fetchRequests: async () => {
+    try {
+      const res = await axios.get(API_URL);
+      set({ requests: res.data.requests || [] });
+    } catch (err) {
+      set({ error: err.response?.data?.msg || "Error fetching requests" });
+    }
+  },
+
+  // ── Fetch sent only ─────────────────────────────────────────────────────────
   fetchSentRequests: async () => {
-    set({ isLoading: true, error: null });
     try {
       const res = await axios.get(`${API_URL}/sent`);
-      set({ sentRequests: res.data.requests, isLoading: false });
+      set({ sentRequests: res.data.requests || [] });
     } catch (err) {
-      set({ error: err.response?.data?.msg || "Error fetching sent requests", isLoading: false });
+      set({ error: err.response?.data?.msg || "Error fetching sent requests" });
     }
   },
 
   // ── Send request ────────────────────────────────────────────────────────────
-  // BookDetailPage sends: { bookId, senderName, type, offerTitle, returnBy, message }
   sendRequest: async (data) => {
     set({ error: null });
     try {
@@ -58,7 +73,6 @@ export const useRequestStore = create((set) => ({
       const updated = res.data.request;
       set((state) => ({
         requests: state.requests.map(r =>
-          // match by both id and _id since backend fmt() sets both
           (r.id?.toString() === id?.toString() || r._id?.toString() === id?.toString())
             ? updated : r
         ),
@@ -76,7 +90,8 @@ export const useRequestStore = create((set) => ({
       await axios.delete(`${API_URL}/${id}`);
       set((state) => ({
         sentRequests: state.sentRequests.filter(r =>
-          r.id?.toString() !== id?.toString() && r._id?.toString() !== id?.toString()
+          r.id?.toString() !== id?.toString() &&
+          r._id?.toString() !== id?.toString()
         ),
       }));
     } catch (err) {

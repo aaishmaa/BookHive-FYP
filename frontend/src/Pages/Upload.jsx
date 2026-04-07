@@ -400,7 +400,7 @@ const UploadPage = () => {
                         {listingType === "Rent" && <span className="text-gray-400 font-normal ml-1">/month</span>}
                       </label>
                       <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white">
-                        <span className="text-gray-400 text-[13px] font-semibold shrink-0">₹</span>
+                        <span className="text-gray-400 text-[13px] font-semibold shrink-0">Rs.</span>
                         <input type="number" min="0" placeholder="0" value={price}
                           onChange={e => setPrice(e.target.value)}
                           className="w-full outline-none text-[13px] text-gray-700 bg-transparent" />

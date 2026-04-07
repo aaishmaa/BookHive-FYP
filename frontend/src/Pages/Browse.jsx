@@ -4,7 +4,7 @@ import {
   Search, Heart, MessageCircle, Share2, Bookmark,
   ChevronDown, SlidersHorizontal, TrendingUp, Star, Clock, X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useBookStore }     from "../store/bookStore";
 import { useWishlistStore } from "../store/wishlistStore";
 import TopSellers from "../Components/TopSeller";
@@ -100,7 +100,7 @@ function PriceDropdown({ min, max, onChange }) {
   }, []);
 
   const active = min || max;
-  const label  = active ? `₹${min||0} – ₹${max||"∞"}` : "Price Range";
+  const label  = active ? `Rs.${min||0} – Rs.${max||"∞"}` : "Price Range";
   const clear  = () => { setLMin(""); setLMax(""); onChange("", ""); };
 
   return (
@@ -118,7 +118,7 @@ function PriceDropdown({ min, max, onChange }) {
         {open && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
             className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-30 w-[220px] p-4">
-            <p className="text-[12px] font-semibold text-gray-600 mb-3">Price Range (₹)</p>
+            <p className="text-[12px] font-semibold text-gray-600 mb-3">Price Range (Rs.)</p>
             <div className="flex items-center gap-2 mb-3">
               <input type="number" min="0" placeholder="Min" value={lMin} onChange={e => setLMin(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[13px] outline-none focus:border-[#1C7C84]" />
@@ -242,6 +242,15 @@ const BrowsePage = () => {
   const [priceMax,  setPriceMax]  = useState("");
   const [sort,      setSort]      = useState("Newest");
 
+  const location = useLocation();
+
+  // Pre-fill search from URL ?search= param (e.g. from Requests page)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get("search");
+    if (q) { setInputVal(q); setSearch(q); }
+  }, []);
+
   const { books, isLoading, fetchBooks }                               = useBookStore();
   const { wishlist, fetchWishlist, addToWishlist, removeFromWishlist } = useWishlistStore();
 
@@ -269,7 +278,7 @@ const BrowsePage = () => {
     .filter(b => {
       if (!priceMin && !priceMax) return true;
       if (b.type === "Exchange")  return true;
-      const num = parseFloat(b.price?.replace(/[₹,\/mo]/g, "") || "0");
+      const num = parseFloat(b.price?.replace(/[Rs.,\/mo]/g, "").replace(/Rs/g, "") || "0");
       if (priceMin && num < parseFloat(priceMin)) return false;
       if (priceMax && num > parseFloat(priceMax)) return false;
       return true;
@@ -347,7 +356,7 @@ const BrowsePage = () => {
               level     && { label: level,              clear: () => handleLevelChange("") },
               classYear && { label: classYear,          clear: () => setClassYear("") },
               category  && { label: category,           clear: () => setCategory("") },
-              (priceMin||priceMax) && { label: `₹${priceMin||0}–₹${priceMax||"∞"}`, clear: () => { setPriceMin(""); setPriceMax(""); } },
+              (priceMin||priceMax) && { label: `Rs.${priceMin||0}–Rs.${priceMax||"∞"}`, clear: () => { setPriceMin(""); setPriceMax(""); } },
             ].filter(Boolean).map((chip, i) => (
               <span key={i} className="flex items-center gap-1.5 bg-[#1C7C84]/10 text-[#1C7C84] text-[12px] font-medium px-3 py-1 rounded-full">
                 {chip.label}
