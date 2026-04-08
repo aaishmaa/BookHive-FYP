@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRequestStore } from "../store/requestStore";
+import { useChatStore }    from "../store/chatStore";
 import TopSellers from "../Components/TopSeller";
 
 const statusStyle = {
@@ -31,11 +32,13 @@ const Requests = () => {
     requests, sentRequests, isLoading, error,
     fetchRequests, fetchSentRequests, updateStatus, cancelRequest,
   } = useRequestStore();
+  const { startConversation } = useChatStore();
 
   const [filter,       setFilter]       = useState("All");
   const [updatingId,   setUpdatingId]   = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [tab,          setTab]          = useState("received");
+  const [chatLoading,  setChatLoading]  = useState(null);
 
   useEffect(() => {
     fetchRequests();
@@ -61,6 +64,20 @@ const Requests = () => {
     setCancellingId(id);
     try { await cancelRequest(id); } catch {}
     setCancellingId(null);
+  };
+
+  // ── Start chat and navigate ───────────────────────────────────────────────
+  const handleChat = async (userId, reqId) => {
+    if (!userId) { navigate("/chat"); return; }
+    setChatLoading(reqId);
+    try {
+      await startConversation(userId);
+      navigate("/chat");
+    } catch {
+      navigate("/chat");
+    } finally {
+      setChatLoading(null);
+    }
   };
 
   const c = counts(list);
@@ -118,7 +135,9 @@ const Requests = () => {
         </div>
 
         {isLoading && <div className="flex justify-center py-16"><Loader className="w-7 h-7 animate-spin text-[#1C7C84]" /></div>}
-        {error && !isLoading && <div className="max-w-2xl bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-[13px] text-red-500">{error}</div>}
+        {error && !isLoading && (
+          <div className="max-w-2xl bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 text-[13px] text-red-500">{error}</div>
+        )}
 
         {!isLoading && (
           <div className="flex flex-col gap-3 max-w-2xl pb-8">
@@ -155,7 +174,6 @@ const Requests = () => {
                         {/* Exchange: side-by-side book preview */}
                         {isExchange && (req.offerBookTitle || req.offerBookImg) ? (
                           <div className="mt-2 flex items-center gap-2 bg-gray-50 rounded-xl p-2.5 border border-gray-100">
-                            {/* Requested book */}
                             <div className="flex items-center gap-1.5 flex-1 min-w-0">
                               {req.bookImg && (
                                 <img src={req.bookImg} alt={req.book}
@@ -170,7 +188,6 @@ const Requests = () => {
                               </div>
                             </div>
                             <ArrowLeftRight className="w-4 h-4 text-gray-400 shrink-0" />
-                            {/* Offered book */}
                             <div className="flex items-center gap-1.5 flex-1 min-w-0">
                               {req.offerBookImg && (
                                 <img src={req.offerBookImg} alt={req.offerBookTitle}
@@ -195,19 +212,10 @@ const Requests = () => {
                           </p>
                         )}
 
-                        {/* Offer text fallback */}
                         {req.offer && !req.offerBookTitle && (
                           <p className="text-[12px] text-gray-400 mt-0.5">
                             {isExchange ? "Offering: " : "Details: "}
-                            {isExchange ? (
-                              <button
-                                onClick={() => navigate(`/browse?search=${encodeURIComponent(req.offer)}`)}
-                                className="text-[#1C7C84] font-medium hover:underline inline-flex items-center gap-1">
-                                {req.offer} <ExternalLink className="w-3 h-3" />
-                              </button>
-                            ) : (
-                              <span className="text-gray-600 font-medium">{req.offer}</span>
-                            )}
+                            <span className="text-gray-600 font-medium">{req.offer}</span>
                           </p>
                         )}
 
@@ -215,7 +223,6 @@ const Requests = () => {
                           <p className="text-[12px] text-gray-400 mt-0.5 italic">"{req.message}"</p>
                         )}
 
-                        {/* Accepted exchange notice */}
                         {req.status === "Accepted" && isExchange && (
                           <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                             <p className="text-[11.5px] text-emerald-700 font-semibold">
@@ -230,6 +237,8 @@ const Requests = () => {
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 mt-4 flex-wrap">
+
+                      {/* RECEIVED + PENDING */}
                       {tab === "received" && req.status === "Pending" && (
                         <>
                           <button onClick={() => handleUpdate(id, "Accepted")} disabled={updatingId === id}
@@ -241,19 +250,34 @@ const Requests = () => {
                             className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-500 text-[12.5px] font-semibold px-4 py-2 rounded-lg transition border border-red-200 disabled:opacity-50">
                             <X className="w-3.5 h-3.5" /> Decline
                           </button>
-                          <button onClick={() => navigate("/chat")}
-                            className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 text-[12.5px] font-semibold px-4 py-2 rounded-lg transition border border-gray-200">
-                            <MessageCircle className="w-3.5 h-3.5" /> Message
+                          {/* Message button — starts real conversation */}
+                          <button
+                            onClick={() => handleChat(req.fromUserId, id)}
+                            disabled={chatLoading === id}
+                            className="flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 text-[12.5px] font-semibold px-4 py-2 rounded-lg transition border border-gray-200 disabled:opacity-50">
+                            {chatLoading === id ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />}
+                            Message
                           </button>
                         </>
                       )}
+
+                      {/* ACCEPTED — Chat button for both tabs */}
                       {req.status === "Accepted" && (
-                        <button onClick={() => navigate("/chat")}
-                          className="flex items-center gap-1.5 bg-[#1C7C84] hover:bg-[#155f65] text-white text-[12.5px] font-semibold px-4 py-2 rounded-lg transition">
-                          <MessageCircle className="w-3.5 h-3.5" />
+                        <button
+                          onClick={() => handleChat(
+                            tab === "received" ? req.fromUserId : req.toUserId,
+                            id
+                          )}
+                          disabled={chatLoading === id}
+                          className="flex items-center gap-1.5 bg-[#1C7C84] hover:bg-[#155f65] text-white text-[12.5px] font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50">
+                          {chatLoading === id
+                            ? <Loader className="w-3.5 h-3.5 animate-spin" />
+                            : <MessageCircle className="w-3.5 h-3.5" />}
                           {tab === "received" ? `Chat with ${req.from}` : "Chat with Seller"}
                         </button>
                       )}
+
+                      {/* SENT + PENDING — Cancel */}
                       {tab === "sent" && req.status === "Pending" && (
                         <button onClick={() => handleCancel(id)} disabled={cancellingId === id}
                           className="flex items-center gap-1.5 text-red-400 hover:text-red-600 text-[12.5px] font-medium border border-red-200 hover:border-red-400 px-4 py-2 rounded-lg transition disabled:opacity-50">
@@ -301,10 +325,10 @@ const Requests = () => {
           </div>
           <div className="space-y-3">
             {[
-              { n:"1", t:"Browse a book",   d:"Find a book to borrow or exchange" },
-              { n:"2", t:"Send Request",    d:"Click Request on the book detail page" },
-              { n:"3", t:"Wait for reply",  d:"Owner accepts or declines your request" },
-              { n:"4", t:"Chat & arrange",  d:"Once accepted, chat to arrange handoff" },
+              { n:"1", t:"Browse a book",  d:"Find a book to borrow or exchange" },
+              { n:"2", t:"Send Request",   d:"Click Request on the book detail page" },
+              { n:"3", t:"Wait for reply", d:"Owner accepts or declines your request" },
+              { n:"4", t:"Chat & arrange", d:"Once accepted, chat to arrange handoff" },
             ].map(step => (
               <div key={step.n} className="flex items-start gap-2.5">
                 <span className="w-5 h-5 rounded-full bg-[#1C7C84] text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{step.n}</span>

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useBookStore }    from "../store/bookStore";
 import { useRequestStore } from "../store/requestStore";
 import { useAuthStore }    from "../store/authStore";
+import { useChatStore }    from "../store/chatStore";
 import axios from "axios";
 import {
   ArrowLeft, User, BookOpen, Tag, MapPin,
@@ -31,7 +32,7 @@ const statusColors = {
 const avatarColors = ["bg-[#1C7C84]","bg-purple-500","bg-amber-500","bg-rose-500","bg-blue-500"];
 const getColor = (name) => avatarColors[(name?.charCodeAt(0)||0) % avatarColors.length];
 
-// ── Exchange Modal — pick your own book ───────────────────────────────────────
+// ── Exchange Modal ────────────────────────────────────────────────────────────
 function ExchangeModal({ book, onClose, onSubmit, submitting }) {
   const [myBooks,      setMyBooks]      = useState([]);
   const [loadingBooks, setLoadingBooks] = useState(true);
@@ -42,7 +43,6 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
   useEffect(() => {
     axios.get(`${BOOKS_URL}/my`, { withCredentials: true })
       .then(res => {
-        // Only show active exchange books (not the same book)
         const available = (res.data.books || []).filter(
           b => b.status === 'Active' && b._id !== book._id
         );
@@ -72,7 +72,6 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
         onClick={e => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px] max-h-[85vh] overflow-y-auto">
 
-        {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between rounded-t-2xl">
           <div>
             <h2 className="text-[16px] font-bold text-gray-900">Request Exchange</h2>
@@ -86,7 +85,6 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
         </div>
 
         <div className="p-6 space-y-5">
-
           {/* What they want */}
           <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
             <img src={book.img || book.images?.[0] || "https://placehold.co/60x60"}
@@ -98,19 +96,16 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="flex items-center justify-center gap-3">
             <div className="h-px flex-1 bg-gray-200" />
             <ArrowLeftRight className="w-4 h-4 text-[#1C7C84]" />
             <div className="h-px flex-1 bg-gray-200" />
           </div>
 
-          {/* Pick your book */}
           <div>
             <p className="text-[13px] font-bold text-gray-700 mb-3">
               Select your book to offer <span className="text-red-500">*</span>
             </p>
-
             {loadingBooks ? (
               <div className="flex justify-center py-6">
                 <Loader className="w-5 h-5 animate-spin text-[#1C7C84]" />
@@ -120,10 +115,6 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
                 <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                 <p className="text-[13px] text-gray-500 font-medium">No books available to offer</p>
                 <p className="text-[12px] text-gray-400 mt-1">Upload a book first to exchange</p>
-                <button onClick={() => { onClose(); }}
-                  className="mt-3 text-[12.5px] text-[#1C7C84] font-semibold hover:underline">
-                  + Upload a book
-                </button>
               </div>
             ) : (
               <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
@@ -138,14 +129,7 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-semibold text-gray-800 truncate">{b.title}</p>
                       <p className="text-[11.5px] text-gray-400 truncate">{b.author}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{b.badge || "Good"}</span>
-                        <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full ${
-                          b.type === 'Exchange' ? 'bg-emerald-50 text-emerald-600' :
-                          b.type === 'Rent'     ? 'bg-purple-50 text-purple-500' : 'bg-blue-50 text-blue-600'}`}>
-                          {b.type}
-                        </span>
-                      </div>
+                      <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{b.badge || "Good"}</span>
                     </div>
                     {selectedBook?._id === b._id && (
                       <div className="w-6 h-6 rounded-full bg-[#1C7C84] flex items-center justify-center shrink-0">
@@ -158,7 +142,6 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
             )}
           </div>
 
-          {/* Selected preview */}
           {selectedBook && (
             <div className="flex items-center gap-2 bg-[#1C7C84]/5 border border-[#1C7C84]/20 rounded-xl px-4 py-3">
               <ArrowLeftRight className="w-4 h-4 text-[#1C7C84] shrink-0" />
@@ -168,7 +151,6 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
             </div>
           )}
 
-          {/* Message */}
           <div>
             <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">
               Message <span className="text-gray-400 font-normal">(optional)</span>
@@ -220,7 +202,7 @@ function BorrowModal({ book, onClose, onSubmit, submitting }) {
             <h2 className="text-[16px] font-bold text-gray-900">Request to Borrow</h2>
             <p className="text-[12px] text-gray-400 mt-0.5 truncate max-w-[300px]">{book.title} · from {book.seller}</p>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition text-xl leading-none">×</button>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition"><X className="w-4 h-4" /></button>
         </div>
         <div className="mb-4">
           <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">Return By <span className="text-red-500">*</span></label>
@@ -252,17 +234,19 @@ const BookDetailPage = () => {
   const { id }     = useParams();
   const navigate   = useNavigate();
   const { currentBook, isLoading, error, fetchBookById } = useBookStore();
-  const { sendRequest } = useRequestStore();
+  const { sendRequest }       = useRequestStore();
   const { user, isAuthenticated } = useAuthStore();
+  const { startConversation } = useChatStore();
 
   const [activeImg,    setActiveImg]    = useState(0);
   const [liked,        setLiked]        = useState(false);
-  const [showModal,    setShowModal]    = useState(null); // 'exchange' | 'borrow'
+  const [showModal,    setShowModal]    = useState(null);
   const [submitting,   setSubmitting]   = useState(false);
   const [requestSent,  setRequestSent]  = useState(false);
   const [requestError, setRequestError] = useState("");
   const [bookRequests, setBookRequests] = useState([]);
   const [reqLoading,   setReqLoading]   = useState(false);
+  const [chatLoading,  setChatLoading]  = useState(false);
 
   useEffect(() => { if (id) fetchBookById(id); }, [id]);
 
@@ -294,6 +278,21 @@ const BookDetailPage = () => {
       setRequestError(err?.response?.data?.msg || err?.message || "Failed to send request.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // ── Start chat with seller ──────────────────────────────────────────────────
+  const handleContactSeller = async () => {
+    if (!isAuthenticated) { navigate("/login"); return; }
+    setChatLoading(true);
+    try {
+      const sellerId = (currentBook.userId?._id || currentBook.userId)?.toString();
+      await startConversation(sellerId);
+      navigate("/chat");
+    } catch {
+      navigate("/chat");
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -340,7 +339,7 @@ const BookDetailPage = () => {
           className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex flex-col lg:flex-row">
 
-            {/* ── Left ── */}
+            {/* ── Left: Images + Requesters ── */}
             <div className="lg:w-[42%] shrink-0 flex flex-col">
               <div className="relative w-full h-72 lg:h-[300px] overflow-hidden bg-gray-100">
                 <img src={images[activeImg]} alt={currentBook.title} className="w-full h-full object-cover" />
@@ -422,7 +421,7 @@ const BookDetailPage = () => {
               </div>
             </div>
 
-            {/* ── Right ── */}
+            {/* ── Right: Details ── */}
             <div className="flex-1 p-6 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <span className={`text-xs font-semibold px-3 py-1 rounded-full ${typeStyle[currentBook.type] ?? "bg-gray-100 text-gray-500"}`}>
@@ -470,6 +469,7 @@ const BookDetailPage = () => {
                 </div>
               )}
 
+              {/* Action Buttons */}
               <div className="flex flex-col gap-2.5 mt-auto pt-2">
                 {requestSent && (
                   <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
@@ -493,9 +493,10 @@ const BookDetailPage = () => {
                 ) : !requestSent ? (
                   <>
                     {currentBook.type === "Sell" && (
-                      <button onClick={() => navigate("/chat")}
-                        className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
-                        <MessageCircle className="w-4 h-4" /> Contact Seller
+                      <button onClick={handleContactSeller} disabled={chatLoading}
+                        className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2 disabled:opacity-70">
+                        {chatLoading ? <Loader className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                        Contact Seller
                       </button>
                     )}
                     {currentBook.type === "Rent" && (
@@ -510,9 +511,11 @@ const BookDetailPage = () => {
                         <ArrowLeftRight className="w-4 h-4" /> Request Exchange
                       </button>
                     )}
-                    <button onClick={() => navigate("/chat")}
-                      className="w-full border border-[#1C7C84] text-[#1C7C84] hover:bg-[#1C7C84]/5 font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
-                      <MessageCircle className="w-4 h-4" /> Message Seller
+                    {/* Message Seller — always visible, starts real chat */}
+                    <button onClick={handleContactSeller} disabled={chatLoading}
+                      className="w-full border border-[#1C7C84] text-[#1C7C84] hover:bg-[#1C7C84]/5 font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2 disabled:opacity-70">
+                      {chatLoading ? <Loader className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                      Message Seller
                     </button>
                   </>
                 ) : null}
