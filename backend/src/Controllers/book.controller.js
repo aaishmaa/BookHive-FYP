@@ -1,4 +1,4 @@
-import { Book } from '../Models/book.model.js';
+import { Book } from '../models/book.model.js';
 import { createNotif } from './notification.controller.js';
 
 export const getBooks = async (req, res) => {

@@ -1,5 +1,5 @@
 import { User } from '../models/user.model.js';
-import { Book } from '../Models/book.model.js';
+import { Book } from '../models/book.model.js';
 import { createNotif } from './notification.controller.js';
 
 // Try to import StudentProfile — may be in different locations

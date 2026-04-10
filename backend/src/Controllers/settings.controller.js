@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { User } from '../Models/user.model.js';
+import { User } from '../models/user.model.js';
 
 // ── PATCH /auth/change-password ───────────────────────────────────────────────
 export const changePassword = async (req, res) => {

@@ -19,6 +19,8 @@ import topSellersRoutes   from './Routes/topSeller.route.js';
 import chatRoutes         from './Routes/chat.route.js';
 import adminRoutes        from './Routes/admin.route.js';
 import transactionRoutes from './Routes/transaction.route.js';
+import reviewRoutes from './Routes/review.route.js';
+import paymentRoutes from './Routes/payment.route.js';
 
 import { initSocket } from './socket.js';
 
@@ -61,6 +63,8 @@ app.use('/chat',          chatRoutes);
 app.use('/admin',         adminRoutes);
 app.use('/uploads',       express.static(path.join(process.cwd(), 'uploads')));
 app.use('/transactions', transactionRoutes);
+app.use('/reviews', reviewRoutes);
+app.use('/payment', paymentRoutes);
 
 app.get('/', (req, res) => res.send('BookHive API is running!'));
 

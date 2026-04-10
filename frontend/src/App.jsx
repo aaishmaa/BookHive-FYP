@@ -11,7 +11,7 @@ import Login                 from './Pages/Login';
 import Register              from './Pages/Register';
 import EmailVerificationPage from './Pages/EmailVerification';
 import StudentForm           from './student/StudentForm';
-import AdminLogin            from './admin/AdminLogin';        
+import AdminLogin            from './admin/AdminLogin';
 
 // App pages
 import Home              from './Pages/Home';
@@ -33,6 +33,8 @@ import BrowsePage        from './Pages/Browse';
 import MyListings        from './Pages/MyListings';
 import Requests          from './Pages/Requests';
 import Wishlist          from './Pages/Wishlist';
+import Checkout          from './Pages/Checkout';
+import OrderSuccess      from './Pages/PaymentSuccess';   // your PaymentSuccess.jsx
 
 // Admin pages
 import AdminStudentReview from './admin/Adminstudentreview';
@@ -41,7 +43,6 @@ import AdminDashboard     from './admin/AdminDashboard';
 // Auth store
 import { useAuthStore } from './store/authStore';
 
-// ── Full desktop layout ───────────────────────────────────────────────────────
 function AppLayout({ children }) {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -56,7 +57,6 @@ function AppLayout({ children }) {
   );
 }
 
-// ── Loading spinner ───────────────────────────────────────────────────────────
 function LoadingScreen() {
   return (
     <div className="h-screen flex items-center justify-center bg-[#F4FAFA]">
@@ -68,17 +68,14 @@ function LoadingScreen() {
   );
 }
 
-// ── Student protected route ───────────────────────────────────────────────────
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isCheckingAuth, user } = useAuthStore();
   if (isCheckingAuth) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  // If admin tries to access student pages → redirect to admin dashboard
   if (user?.role === "admin") return <Navigate to="/admin" replace />;
   return children;
 }
 
-// ── Admin protected route (no AppLayout) ─────────────────────────────────────
 function AdminRoute({ children }) {
   const { isAuthenticated, isCheckingAuth, user } = useAuthStore();
   if (isCheckingAuth) return <LoadingScreen />;
@@ -95,7 +92,6 @@ const A = ({ children }) => (
   <AdminRoute>{children}</AdminRoute>
 );
 
-// ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
   const { checkAuth } = useAuthStore();
   useEffect(() => { checkAuth(); }, [checkAuth]);
@@ -112,9 +108,10 @@ function App() {
         <Route path="/Register"      element={<Register />} />
         <Route path="/verify-email"  element={<EmailVerificationPage />} />
         <Route path="/form-page"     element={<StudentForm />} />
-
-        {/* ── Admin login — separate public route ── */}
         <Route path="/admin/login"   element={<AdminLogin />} />
+
+        {/* ── Khalti redirect — PUBLIC (no login needed, Khalti redirects here) ── */}
+        <Route path="/payment/success" element={<OrderSuccess />} />
 
         {/* ── Student protected routes ── */}
         <Route path="/home"          element={<P><Home /></P>} />
@@ -135,7 +132,9 @@ function App() {
         <Route path="/exchange"      element={<P><ExchangePage /></P>} />
         <Route path="/profile"       element={<P><ProfilePage /></P>} />
         <Route path="/book/:id"      element={<P><BookDetailPage /></P>} />
-        <Route path="/user/:userId"   element={<P><PublicProfile /></P>} />
+        <Route path="/user/:userId"  element={<P><PublicProfile /></P>} />
+        <Route path="/checkout"      element={<P><Checkout /></P>} />
+        <Route path="/order-success" element={<P><OrderSuccess /></P>} />
 
         {/* ── Admin protected routes ── */}
         <Route path="/admin"          element={<A><AdminDashboard /></A>} />

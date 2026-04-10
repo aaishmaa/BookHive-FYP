@@ -8,20 +8,21 @@ import axios from "axios";
 import {
   ArrowLeft, User, BookOpen, Tag, MapPin,
   MessageCircle, ArrowLeftRight, Heart, Share2,
-  Eye, Calendar, Check, RefreshCcw, Loader, X,
+  Eye, Calendar, Check, RefreshCcw, Loader, X, Star, Send, ShoppingCart,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const REQ_URL   = import.meta.env.MODE === "development" ? "http://localhost:5000/requests" : "/requests";
-const BOOKS_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/books"    : "/books";
+const REQ_URL    = import.meta.env.MODE === "development" ? "http://localhost:5000/requests" : "/requests";
+const BOOKS_URL  = import.meta.env.MODE === "development" ? "http://localhost:5000/books"    : "/books";
+const REVIEW_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/reviews"  : "/reviews";
 
 const badgeBg = {
   "Like New": "bg-emerald-600", "Very Good": "bg-blue-600",
   Good: "bg-gray-700", Fair: "bg-amber-600", Acceptable: "bg-slate-600",
 };
 const typeStyle = {
-  Sell: "bg-[#EEF2FF] text-indigo-500",
-  Rent: "bg-purple-50 text-purple-500",
+  Sell:     "bg-[#EEF2FF] text-indigo-500",
+  Rent:     "bg-purple-50 text-purple-500",
   Exchange: "bg-green-50 text-green-600",
 };
 const statusColors = {
@@ -31,6 +32,28 @@ const statusColors = {
 };
 const avatarColors = ["bg-[#1C7C84]","bg-purple-500","bg-amber-500","bg-rose-500","bg-blue-500"];
 const getColor = (name) => avatarColors[(name?.charCodeAt(0)||0) % avatarColors.length];
+
+// ── Star Rating ───────────────────────────────────────────────────────────────
+function StarRating({ value, onChange, size = "w-5 h-5" }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1,2,3,4,5].map(i => (
+        <button key={i} type="button"
+          onClick={() => onChange && onChange(i)}
+          onMouseEnter={() => onChange && setHover(i)}
+          onMouseLeave={() => onChange && setHover(0)}
+          className={onChange ? "cursor-pointer" : "cursor-default"}>
+          <Star className={`${size} transition ${
+            i <= (hover || value)
+              ? "fill-amber-400 text-amber-400"
+              : "fill-gray-200 text-gray-200"
+          }`} />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // ── Exchange Modal ────────────────────────────────────────────────────────────
 function ExchangeModal({ book, onClose, onSubmit, submitting }) {
@@ -68,48 +91,36 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        onClick={e => e.stopPropagation()}
+        exit={{ opacity: 0, scale: 0.95 }} onClick={e => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-[480px] max-h-[85vh] overflow-y-auto">
-
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-start justify-between rounded-t-2xl">
           <div>
             <h2 className="text-[16px] font-bold text-gray-900">Request Exchange</h2>
-            <p className="text-[12px] text-gray-400 mt-0.5 truncate max-w-[300px]">
-              for "{book.title}" · from {book.seller}
-            </p>
+            <p className="text-[12px] text-gray-400 mt-0.5 truncate max-w-[300px]">for "{book.title}" · from {book.seller}</p>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition">
             <X className="w-4 h-4" />
           </button>
         </div>
-
         <div className="p-6 space-y-5">
-          {/* What they want */}
           <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-            <img src={book.img || book.images?.[0] || "https://placehold.co/60x60"}
-              alt={book.title} className="w-12 h-14 rounded-lg object-cover shrink-0 border border-green-200" />
+            <img src={book.img || book.images?.[0] || "https://placehold.co/60x60"} alt={book.title}
+              className="w-12 h-14 rounded-lg object-cover shrink-0 border border-green-200" />
             <div className="flex-1 min-w-0">
               <p className="text-[11px] text-green-600 font-semibold uppercase tracking-wide">You want</p>
               <p className="text-[13.5px] font-bold text-gray-900 truncate">{book.title}</p>
               <p className="text-[12px] text-gray-400">by {book.author}</p>
             </div>
           </div>
-
           <div className="flex items-center justify-center gap-3">
             <div className="h-px flex-1 bg-gray-200" />
             <ArrowLeftRight className="w-4 h-4 text-[#1C7C84]" />
             <div className="h-px flex-1 bg-gray-200" />
           </div>
-
           <div>
-            <p className="text-[13px] font-bold text-gray-700 mb-3">
-              Select your book to offer <span className="text-red-500">*</span>
-            </p>
+            <p className="text-[13px] font-bold text-gray-700 mb-3">Select your book to offer <span className="text-red-500">*</span></p>
             {loadingBooks ? (
-              <div className="flex justify-center py-6">
-                <Loader className="w-5 h-5 animate-spin text-[#1C7C84]" />
-              </div>
+              <div className="flex justify-center py-6"><Loader className="w-5 h-5 animate-spin text-[#1C7C84]" /></div>
             ) : myBooks.length === 0 ? (
               <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                 <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
@@ -121,9 +132,7 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
                 {myBooks.map(b => (
                   <div key={b._id} onClick={() => setSelectedBook(b)}
                     className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition
-                      ${selectedBook?._id === b._id
-                        ? "border-[#1C7C84] bg-[#1C7C84]/5"
-                        : "border-gray-200 hover:border-gray-300 bg-white"}`}>
+                      ${selectedBook?._id === b._id ? "border-[#1C7C84] bg-[#1C7C84]/5" : "border-gray-200 hover:border-gray-300 bg-white"}`}>
                     <img src={b.img || b.images?.[0] || "https://placehold.co/60x60/1C7C84/white?text=B"}
                       alt={b.title} className="w-10 h-12 rounded-lg object-cover shrink-0 border border-gray-100" />
                     <div className="flex-1 min-w-0">
@@ -141,32 +150,21 @@ function ExchangeModal({ book, onClose, onSubmit, submitting }) {
               </div>
             )}
           </div>
-
           {selectedBook && (
             <div className="flex items-center gap-2 bg-[#1C7C84]/5 border border-[#1C7C84]/20 rounded-xl px-4 py-3">
               <ArrowLeftRight className="w-4 h-4 text-[#1C7C84] shrink-0" />
-              <p className="text-[12.5px] text-gray-700">
-                Offering <span className="font-bold text-[#1C7C84]">"{selectedBook.title}"</span> in exchange
-              </p>
+              <p className="text-[12.5px] text-gray-700">Offering <span className="font-bold text-[#1C7C84]">"{selectedBook.title}"</span> in exchange</p>
             </div>
           )}
-
           <div>
-            <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">
-              Message <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
+            <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">Message <span className="text-gray-400 font-normal">(optional)</span></label>
             <textarea rows={2} placeholder="Add a note to the seller..."
               value={message} onChange={e => setMessage(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[#1C7C84] transition resize-none" />
           </div>
-
           {error && <p className="text-[12px] text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-
           <div className="flex gap-2">
-            <button onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">
-              Cancel
-            </button>
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
             <button onClick={handleSubmit} disabled={submitting || !selectedBook}
               className="flex-1 py-2.5 rounded-xl bg-[#1C7C84] hover:bg-[#155f65] text-white text-[13px] font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60">
               {submitting ? <Loader className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
@@ -184,23 +182,20 @@ function BorrowModal({ book, onClose, onSubmit, submitting }) {
   const [returnBy, setReturnBy] = useState("");
   const [message,  setMessage]  = useState("");
   const [error,    setError]    = useState("");
-
   const handleSubmit = async () => {
     if (!returnBy) { setError("Please select a return date."); return; }
     setError("");
     await onSubmit({ type: "Borrow", returnBy, message });
   };
-
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        onClick={e => e.stopPropagation()}
+        exit={{ opacity: 0, scale: 0.95 }} onClick={e => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-[420px] p-6">
         <div className="flex items-start justify-between mb-5">
           <div>
             <h2 className="text-[16px] font-bold text-gray-900">Request to Borrow</h2>
-            <p className="text-[12px] text-gray-400 mt-0.5 truncate max-w-[300px]">{book.title} · from {book.seller}</p>
+            <p className="text-[12px] text-gray-400 mt-0.5">{book.title} · from {book.seller}</p>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition"><X className="w-4 h-4" /></button>
         </div>
@@ -212,8 +207,7 @@ function BorrowModal({ book, onClose, onSubmit, submitting }) {
         </div>
         <div className="mb-5">
           <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">Message <span className="text-gray-400 font-normal">(optional)</span></label>
-          <textarea rows={3} placeholder="Add a note to the seller..."
-            value={message} onChange={e => setMessage(e.target.value)}
+          <textarea rows={3} placeholder="Add a note..." value={message} onChange={e => setMessage(e.target.value)}
             className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] outline-none focus:border-[#1C7C84] transition resize-none" />
         </div>
         {error && <p className="text-[12px] text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{error}</p>}
@@ -248,10 +242,22 @@ const BookDetailPage = () => {
   const [reqLoading,   setReqLoading]   = useState(false);
   const [chatLoading,  setChatLoading]  = useState(false);
 
+  // Reviews
+  const [reviews,       setReviews]       = useState([]);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [myRating,      setMyRating]      = useState(0);
+  const [myReview,      setMyReview]      = useState("");
+  const [submittingRev, setSubmittingRev] = useState(false);
+  const [reviewError,   setReviewError]   = useState("");
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+
   useEffect(() => { if (id) fetchBookById(id); }, [id]);
 
   useEffect(() => {
-    if (currentBook?._id) fetchBookRequests(currentBook._id);
+    if (currentBook?._id) {
+      fetchBookRequests(currentBook._id);
+      fetchReviews(currentBook._id);
+    }
   }, [currentBook?._id]);
 
   const fetchBookRequests = async (bookId) => {
@@ -261,6 +267,32 @@ const BookDetailPage = () => {
       setBookRequests(res.data.requests || []);
     } catch {}
     setReqLoading(false);
+  };
+
+  const fetchReviews = async (bookId) => {
+    setReviewLoading(true);
+    try {
+      const res = await axios.get(`${REVIEW_URL}/${bookId}`, { withCredentials: true });
+      setReviews(res.data.reviews || []);
+    } catch { setReviews([]); }
+    setReviewLoading(false);
+  };
+
+  const submitReview = async () => {
+    if (!myRating)        { setReviewError("Please select a rating."); return; }
+    if (!myReview.trim()) { setReviewError("Please write a review.");  return; }
+    setSubmittingRev(true);
+    setReviewError("");
+    try {
+      await axios.post(`${REVIEW_URL}/${currentBook._id}`, { rating: myRating, text: myReview }, { withCredentials: true });
+      setReviewSuccess(true);
+      setMyRating(0);
+      setMyReview("");
+      fetchReviews(currentBook._id);
+    } catch (err) {
+      setReviewError(err?.response?.data?.msg || "Failed to submit review.");
+    }
+    setSubmittingRev(false);
   };
 
   const isOwner = user && currentBook &&
@@ -281,7 +313,6 @@ const BookDetailPage = () => {
     }
   };
 
-  // ── Start chat with seller ──────────────────────────────────────────────────
   const handleContactSeller = async () => {
     if (!isAuthenticated) { navigate("/login"); return; }
     setChatLoading(true);
@@ -289,12 +320,13 @@ const BookDetailPage = () => {
       const sellerId = (currentBook.userId?._id || currentBook.userId)?.toString();
       await startConversation(sellerId);
       navigate("/chat");
-    } catch {
-      navigate("/chat");
-    } finally {
-      setChatLoading(false);
-    }
+    } catch { navigate("/chat"); }
+    finally { setChatLoading(false); }
   };
+
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+    : null;
 
   if (isLoading) return (
     <div className="flex justify-center items-center h-full">
@@ -320,26 +352,25 @@ const BookDetailPage = () => {
     <div className="h-full overflow-y-auto bg-gray-50 px-6 py-8">
       <AnimatePresence>
         {showModal === 'exchange' && (
-          <ExchangeModal book={currentBook} onClose={() => setShowModal(null)}
-            onSubmit={handleRequest} submitting={submitting} />
+          <ExchangeModal book={currentBook} onClose={() => setShowModal(null)} onSubmit={handleRequest} submitting={submitting} />
         )}
         {showModal === 'borrow' && (
-          <BorrowModal book={currentBook} onClose={() => setShowModal(null)}
-            onSubmit={handleRequest} submitting={submitting} />
+          <BorrowModal book={currentBook} onClose={() => setShowModal(null)} onSubmit={handleRequest} submitting={submitting} />
         )}
       </AnimatePresence>
 
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto space-y-5">
         <button onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-500 hover:text-[#1C7C84] text-sm font-medium mb-6 transition">
+          className="flex items-center gap-2 text-gray-500 hover:text-[#1C7C84] text-sm font-medium transition">
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
+        {/* ── Main Card ── */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex flex-col lg:flex-row">
 
-            {/* ── Left: Images + Requesters ── */}
+            {/* Left: Images + Requesters */}
             <div className="lg:w-[42%] shrink-0 flex flex-col">
               <div className="relative w-full h-72 lg:h-[300px] overflow-hidden bg-gray-100">
                 <img src={images[activeImg]} alt={currentBook.title} className="w-full h-full object-cover" />
@@ -353,19 +384,16 @@ const BookDetailPage = () => {
                   <Heart className={`w-4 h-4 ${liked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
                 </button>
               </div>
-
               {images.length > 1 && (
                 <div className="flex gap-2 p-3 overflow-x-auto">
                   {images.map((img, i) => (
                     <button key={i} onClick={() => setActiveImg(i)}
-                      className={`w-14 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition
-                        ${activeImg === i ? "border-[#1C7C84]" : "border-transparent hover:border-gray-300"}`}>
+                      className={`w-14 h-14 rounded-lg overflow-hidden shrink-0 border-2 transition ${activeImg === i ? "border-[#1C7C84]" : "border-transparent hover:border-gray-300"}`}>
                       <img src={img} alt="" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
               )}
-
               {/* Requesters panel */}
               <div className="border-t border-gray-100 p-4 flex-1">
                 <div className="flex items-center justify-between mb-3">
@@ -379,14 +407,12 @@ const BookDetailPage = () => {
                     {currentBook.enquiries ?? bookRequests.length} total
                   </span>
                 </div>
-
                 {bookRequests.length > 0 && (
                   <div className="flex gap-2 mb-3 flex-wrap">
                     {acceptedCount > 0 && <span className="text-[10.5px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600">✓ {acceptedCount} accepted</span>}
                     {pendingCount  > 0 && <span className="text-[10.5px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600">⏳ {pendingCount} pending</span>}
                   </div>
                 )}
-
                 {reqLoading ? (
                   <div className="flex justify-center py-4"><Loader className="w-5 h-5 animate-spin text-[#1C7C84]" /></div>
                 ) : bookRequests.length === 0 ? (
@@ -397,8 +423,7 @@ const BookDetailPage = () => {
                 ) : (
                   <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto">
                     {bookRequests.map((req, i) => (
-                      <div key={req.id?.toString() || i}
-                        className="flex items-center gap-2.5 py-2 border-b border-gray-50 last:border-0">
+                      <div key={req.id?.toString() || i} className="flex items-center gap-2.5 py-2 border-b border-gray-50 last:border-0">
                         <div className={`w-8 h-8 rounded-full ${getColor(req.from)} flex items-center justify-center text-white text-[11px] font-bold shrink-0`}>
                           {req.fi}
                         </div>
@@ -421,7 +446,7 @@ const BookDetailPage = () => {
               </div>
             </div>
 
-            {/* ── Right: Details ── */}
+            {/* Right: Details */}
             <div className="flex-1 p-6 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <span className={`text-xs font-semibold px-3 py-1 rounded-full ${typeStyle[currentBook.type] ?? "bg-gray-100 text-gray-500"}`}>
@@ -438,10 +463,29 @@ const BookDetailPage = () => {
                 <p className="text-[24px] font-extrabold text-[#1C7C84] mt-2">{currentBook.price}</p>
               </div>
 
+              {/* Seller card — clickable */}
+              <div onClick={() => { const uid = currentBook.userId?._id || currentBook.userId; if (uid) navigate(`/user/${uid}`); }}
+                className="flex items-center gap-3 bg-[#F4FAFA] border border-gray-100 rounded-xl px-4 py-3 cursor-pointer hover:border-[#1C7C84]/30 transition">
+                <div className={`w-9 h-9 rounded-full ${getColor(currentBook.seller)} flex items-center justify-center text-white text-[13px] font-bold shrink-0`}>
+                  {currentBook.seller?.[0]?.toUpperCase() || "S"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13.5px] font-semibold text-gray-800">{currentBook.seller}</p>
+                  {avgRating && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <StarRating value={Math.round(parseFloat(avgRating))} size="w-3 h-3" />
+                      <span className="text-[11.5px] text-gray-400">({avgRating})</span>
+                    </div>
+                  )}
+                </div>
+                <span className="text-[11.5px] text-[#1C7C84] font-medium shrink-0">View profile →</span>
+              </div>
+
               <div className="flex items-center gap-4 text-[12px] text-gray-400 flex-wrap">
                 <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5"/>{currentBook.views ?? 0} views</span>
                 <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5"/>{currentBook.likes ?? 0} likes</span>
                 <span className="flex items-center gap-1"><RefreshCcw className="w-3.5 h-3.5"/>{currentBook.enquiries ?? 0} requests</span>
+                <span className="flex items-center gap-1"><Star className="w-3 h-3 fill-amber-400 text-amber-400"/>{reviews.length} reviews</span>
                 <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5"/>{new Date(currentBook.createdAt).toLocaleDateString()}</span>
               </div>
 
@@ -474,8 +518,7 @@ const BookDetailPage = () => {
                 {requestSent && (
                   <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
                     className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-[13px] text-emerald-700 font-medium">
-                    <Check className="w-4 h-4 shrink-0" />
-                    Request sent! You'll be notified when the seller responds.
+                    <Check className="w-4 h-4 shrink-0" /> Request sent! You'll be notified when the seller responds.
                   </motion.div>
                 )}
                 {requestError && (
@@ -493,11 +536,22 @@ const BookDetailPage = () => {
                 ) : !requestSent ? (
                   <>
                     {currentBook.type === "Sell" && (
-                      <button onClick={handleContactSeller} disabled={chatLoading}
-                        className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2 disabled:opacity-70">
-                        {chatLoading ? <Loader className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
-                        Contact Seller
-                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={handleContactSeller} disabled={chatLoading}
+                          className="flex-1 bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2 disabled:opacity-70">
+                          {chatLoading ? <Loader className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                          Chat with Seller
+                        </button>
+                        <button
+                          onClick={() => navigate("/checkout", { state: { book: currentBook } })}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
+                          <ShoppingCart className="w-4 h-4" /> Buy Now
+                        </button>
+                        <button onClick={() => setLiked(!liked)}
+                          className="w-12 h-12 border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-50 transition shrink-0">
+                          <Heart className={`w-5 h-5 ${liked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                        </button>
+                      </div>
                     )}
                     {currentBook.type === "Rent" && (
                       <button onClick={() => isAuthenticated ? setShowModal('borrow') : navigate("/login")}
@@ -511,7 +565,6 @@ const BookDetailPage = () => {
                         <ArrowLeftRight className="w-4 h-4" /> Request Exchange
                       </button>
                     )}
-                    {/* Message Seller — always visible, starts real chat */}
                     <button onClick={handleContactSeller} disabled={chatLoading}
                       className="w-full border border-[#1C7C84] text-[#1C7C84] hover:bg-[#1C7C84]/5 font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2 disabled:opacity-70">
                       {chatLoading ? <Loader className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
@@ -523,6 +576,70 @@ const BookDetailPage = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* ── Reviews Section ── */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-[17px] font-bold text-gray-900">Reviews</h2>
+            {avgRating && (
+              <div className="flex items-center gap-2">
+                <StarRating value={Math.round(parseFloat(avgRating))} size="w-4 h-4" />
+                <span className="text-[14px] font-bold text-gray-700">{avgRating}</span>
+                <span className="text-[12px] text-gray-400">({reviews.length})</span>
+              </div>
+            )}
+          </div>
+
+          {/* Review list */}
+          {reviewLoading ? (
+            <div className="flex justify-center py-8"><Loader className="w-5 h-5 animate-spin text-[#1C7C84]" /></div>
+          ) : reviews.length === 0 ? (
+            <p className="text-[13px] text-gray-400 mb-6">No reviews yet. Be the first to review!</p>
+          ) : (
+            <div className="flex flex-col divide-y divide-gray-100 mb-6">
+              {reviews.map((rev, i) => (
+                <div key={rev._id || i} className="py-4 first:pt-0">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-full ${getColor(rev.userName)} flex items-center justify-center text-white text-[12px] font-bold shrink-0`}>
+                      {rev.userName?.[0]?.toUpperCase() || "U"}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="text-[13.5px] font-semibold text-gray-800">{rev.userName}</p>
+                        <StarRating value={rev.rating} size="w-3.5 h-3.5" />
+                      </div>
+                      <p className="text-[13px] text-gray-600 leading-relaxed">{rev.text}</p>
+                      <p className="text-[11px] text-gray-400 mt-1">{new Date(rev.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Write review — only for non-owners */}
+          {!isOwner && isAuthenticated && (
+            <div className={reviews.length > 0 ? "border-t border-gray-100 pt-5" : ""}>
+              <h3 className="text-[14px] font-bold text-gray-800 mb-3">Write a Review</h3>
+              <div className="mb-3">
+                <StarRating value={myRating} onChange={setMyRating} size="w-6 h-6" />
+              </div>
+              <textarea rows={3} placeholder="Share your experience..."
+                value={myReview} onChange={e => setMyReview(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] outline-none focus:border-[#1C7C84] transition resize-none mb-3" />
+              {reviewError   && <p className="text-[12px] text-red-500 mb-3">{reviewError}</p>}
+              {reviewSuccess && <p className="text-[12px] text-emerald-600 mb-3">✅ Review submitted!</p>}
+              <button onClick={submitReview} disabled={submittingRev}
+                className="flex items-center gap-2 bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold px-6 py-2.5 rounded-xl transition text-[13.5px] disabled:opacity-60">
+                {submittingRev ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Submit Review
+              </button>
+            </div>
+          )}
+        </motion.div>
+
       </div>
     </div>
   );

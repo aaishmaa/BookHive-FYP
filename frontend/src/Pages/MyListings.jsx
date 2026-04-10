@@ -36,7 +36,7 @@ const timeAgo = (d) => {
 // ─── Edit Modal ───────────────────────────────────────────────────────────────
 function EditModal({ book, onClose, onSave }) {
   const [price,  setPrice]  = useState(
-    book.price?.replace(/[₹\/mo]/g, "").replace("For Exchange","") || ""
+    book.price?.replace(/[Rs.\/mo]/g, "").replace("For Exchange","") || ""
   );
   const [status, setStatus] = useState(book.status || "Active");
   const [saving, setSaving] = useState(false);
@@ -45,8 +45,8 @@ function EditModal({ book, onClose, onSave }) {
     setSaving(true);
     try {
       let finalPrice = book.price;
-      if (book.type === "Sell")     finalPrice = `₹${price}`;
-      if (book.type === "Rent")     finalPrice = `₹${price}/mo`;
+      if (book.type === "Sell")     finalPrice = `Rs.${price}`;
+      if (book.type === "Rent")     finalPrice = `Rs.${price}/mo`;
       if (book.type === "Exchange") finalPrice = "For Exchange";
       await onSave(book._id, { price: finalPrice, status });
       onClose();
@@ -101,7 +101,7 @@ function EditModal({ book, onClose, onSave }) {
               Price {book.type === "Rent" && <span className="font-normal text-gray-400">(per month)</span>}
             </label>
             <div className="flex items-center border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#1C7C84] transition bg-white">
-              <span className="text-gray-400 mr-1.5 text-[13px]">₹</span>
+              <span className="text-gray-400 mr-1.5 text-[13px]">RS.</span>
               <input type="number" min="0" value={price}
                 onChange={e => setPrice(e.target.value)}
                 className="w-full outline-none text-[13px] text-gray-700 bg-transparent" />

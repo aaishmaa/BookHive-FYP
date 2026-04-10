@@ -181,8 +181,8 @@ const UploadPage = () => {
       fd.append("type",        listingType);
       fd.append("seller",      user?.name || "Unknown");
       fd.append("price",
-        listingType === "Sell" ? `₹${price}` :
-        listingType === "Rent" ? `₹${price}/mo` : "For Exchange"
+        listingType === "Sell" ? `RS.${price}` :
+        listingType === "Rent" ? `RS.${price}/mo` : "For Exchange"
       );
       images.forEach(img => fd.append("images", img.file));
       await createBook(fd);

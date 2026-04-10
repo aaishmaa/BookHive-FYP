@@ -1,6 +1,8 @@
-import { Request } from '../Models/request.model.js';
-import { Book }    from '../Models/book.model.js';
+import { Request } from '../models/request.model.js';
+import { Book }    from '../models/book.model.js';
 import { createNotif } from './notification.controller.js';
+import { createTransaction } from './transaction.controller.js';
+
 
 const timeAgo = (d) => {
   if (!d) return "";
@@ -129,6 +131,56 @@ export const updateRequestStatus = async (req, res) => {
 
     request.status = status;
     await request.save();
+    if (status === 'Accepted') {
+  if (request.type === 'Exchange') {
+    // Both users get an exchange transaction
+    await createTransaction({
+      userId:      request.toUserId,
+      bookId:      request.bookId,
+      bookTitle:   request.bookTitle,
+      type:        'exchange',
+      amount:      0,
+      counterpart: request.fromUserName,
+      requestId:   request._id,
+      status:      'Completed',
+    });
+    await createTransaction({
+      userId:      request.fromUserId,
+      bookId:      request.offerBookId || request.bookId,
+      bookTitle:   request.offerBookTitle || request.bookTitle,
+      type:        'exchange',
+      amount:      0,
+      counterpart: 'Seller',
+      requestId:   request._id,
+      status:      'Completed',
+    });
+  } else if (request.type === 'Borrow') {
+    const book     = await Book.findById(request.bookId);
+    const priceNum = parseInt(book?.price?.replace(/[^0-9]/g, '') || '0');
+    // Sender pays
+    await createTransaction({
+      userId:      request.fromUserId,
+      bookId:      request.bookId,
+      bookTitle:   request.bookTitle,
+      type:        'rental',
+      amount:      -priceNum,
+      counterpart: 'Seller',
+      requestId:   request._id,
+      status:      'Completed',
+    });
+    // Receiver earns
+    await createTransaction({
+      userId:      request.toUserId,
+      bookId:      request.bookId,
+      bookTitle:   request.bookTitle,
+      type:        'sale',
+      amount:      +priceNum,
+      counterpart: request.fromUserName,
+      requestId:   request._id,
+      status:      'Completed',
+    });
+  }
+}
 
     // If exchange accepted → mark both books as Sold
     if (status === 'Accepted' && request.type === 'Exchange') {

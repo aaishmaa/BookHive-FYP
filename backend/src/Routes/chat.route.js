@@ -1,28 +1,16 @@
 import express from 'express';
-import { 
-  getConversations, 
-  getOrCreateConversation, 
-  sendMessage, 
-  markAsRead,
-  deleteConversation
+import {
+  getConversations, getConversation,
+  startConversation, sendMessage, markAsRead,
 } from '../Controllers/chat.controller.js';
-import { verifyToken } from '../Middlewares/VerifyToken.js';
+import { verifyToken } from '../Middlewares/verifyToken.js';
 
 const router = express.Router();
 
-// Get all conversations for the current user
-router.get('/conversations', verifyToken, getConversations);
-
-// Get or create a conversation with a specific user
-router.get('/conversations/:userId', verifyToken, getOrCreateConversation);
-
-// Send a message in a conversation
-router.post('/conversations/:conversationId/messages', verifyToken, sendMessage);
-
-// Mark messages in a conversation as read
-router.patch('/conversations/:conversationId/read', verifyToken, markAsRead);
-
-// Delete a conversation
-router.delete('/conversations/:conversationId', verifyToken, deleteConversation);
+router.get('/',                        verifyToken, getConversations);
+router.get('/:id',                     verifyToken, getConversation);
+router.post('/',                       verifyToken, startConversation);
+router.post('/:id/messages',           verifyToken, sendMessage);
+router.patch('/:id/read',              verifyToken, markAsRead);
 
 export default router;
