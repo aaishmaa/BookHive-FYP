@@ -51,12 +51,14 @@ const Checkout = () => {
     try {
       const res = await axios.post(`${API}/initiate`, {
         bookId:        book._id,
-        amount:        total,          // controller multiplies by 100
+        amount:        total,
         bookTitle:     book.title,
         customerName:  name,
         customerPhone: phone,
         customerEmail: user?.email || "",
-        // return_url is set in controller via CLIENT_URL env
+        sellerId:      book.userId?._id || book.userId || "",
+        sellerName:    book.seller || "Seller",
+        buyerName:     user?.name  || "Buyer",
       }, { withCredentials: true });
 
       // Redirect to Khalti payment page
@@ -76,12 +78,18 @@ const Checkout = () => {
     setLoading(true);
     setError("");
     try {
-      // For COD just mark book sold and go to order success
-      navigate("/order-success", {
-        state: { book, paymentMethod: "COD" }
-      });
+      await axios.post(`${API}/cod`, {
+        bookId:     book._id,
+        bookTitle:  book.title,
+        amount:     total,
+        sellerId:   book.userId?._id || book.userId || "",
+        sellerName: book.seller || "Seller",
+        buyerName:  user?.name  || "Buyer",
+        delivery:   { name, address, city, pin, phone },
+      }, { withCredentials: true });
+      navigate("/order-success", { state: { book, paymentMethod: "COD" } });
     } catch (err) {
-      setError("Failed to place order.");
+      setError(err?.response?.data?.msg || "Failed to place order.");
     }
     setLoading(false);
   };

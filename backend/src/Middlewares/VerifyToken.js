@@ -5,7 +5,9 @@ import { User } from '../models/user.model.js';
 dotenv.config();
 
 export const verifyToken = async (req, res, next) => {
-  const token = req.cookies.token;
+ const token =
+  req.cookies.token ||
+  req.headers.authorization?.split(" ")[1];
 
   if (!token) {
     return res.status(401).json({ success: false, message: "Not authorized to access this route" });
@@ -28,6 +30,9 @@ export const verifyToken = async (req, res, next) => {
 
   } catch (error) {
     console.log("error in verifyToken ", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    return res.status(401).json({
+  success: false,
+  message: "Invalid or expired token",
+});
   }
 };

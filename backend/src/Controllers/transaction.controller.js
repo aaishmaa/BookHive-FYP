@@ -1,19 +1,19 @@
-import { Transaction } from '../models/transaction.model.js';
+import { Transaction } from '../Models/transaction.model.js';  // capital M
 
 const fmt = (t) => ({
-  id:          t._id,
-  title:       t.bookTitle,
-  sub:         t.counterpart
-                 ? (t.amount < 0 ? `From ${t.counterpart}` : `To ${t.counterpart}`)
-                 : '',
-  date:        new Date(t.createdAt).toLocaleDateString('en-US', {
-                 month: 'short', day: 'numeric', year: 'numeric'
-               }),
-  type:        t.type,
-  amount:      t.amount,
-  status:      t.status,
-  bookId:      t.bookId,
-  requestId:   t.requestId,
+  id:        t._id,
+  title:     t.bookTitle,
+  sub:       t.counterpart
+               ? (t.amount < 0 ? `From ${t.counterpart}` : `To ${t.counterpart}`)
+               : '',
+  date:      new Date(t.createdAt).toLocaleDateString('en-US', {
+               month: 'short', day: 'numeric', year: 'numeric'
+             }),
+  type:      t.type,
+  amount:    t.amount,
+  status:    t.status,
+  bookId:    t.bookId,
+  requestId: t.requestId,
 });
 
 // ── GET /transactions ─────────────────────────────────────────────────────────
@@ -28,7 +28,6 @@ export const getTransactions = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(100);
 
-    // Stats
     const all    = await Transaction.find({ userId: req.userId });
     const spent  = all.filter(t => t.amount < 0).reduce((a, t) => a + Math.abs(t.amount), 0);
     const earned = all.filter(t => t.amount > 0).reduce((a, t) => a + t.amount, 0);
@@ -46,8 +45,7 @@ export const getTransactions = async (req, res) => {
   }
 };
 
-// ── Helper: create transaction from other controllers ─────────────────────────
-// Usage: await createTransaction({ userId, bookId, bookTitle, type, amount, counterpart, requestId, status })
+// ── Helper used by khalti.controller.js ──────────────────────────────────────
 export const createTransaction = async (data) => {
   try {
     await Transaction.create(data);
