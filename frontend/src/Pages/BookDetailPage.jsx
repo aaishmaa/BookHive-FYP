@@ -214,7 +214,7 @@ function BorrowModal({ book, onClose, onSubmit, submitting }) {
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
           <button onClick={handleSubmit} disabled={submitting}
-            className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-[13px] font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60">
+            className="flex-1 py-2.5 rounded-xl bg-[#1C7C84] hover:bg-[#155f65] text-white text-[13px] font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60">
             {submitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><Check className="w-4 h-4" /> Send Request</>}
           </button>
         </div>
@@ -544,7 +544,7 @@ const BookDetailPage = () => {
                         </button>
                         <button
                           onClick={() => navigate("/checkout", { state: { book: currentBook } })}
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
+                          className="flex-1 bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
                           <ShoppingCart className="w-4 h-4" /> Buy Now
                         </button>
                         <button onClick={() => setLiked(!liked)}
@@ -555,13 +555,13 @@ const BookDetailPage = () => {
                     )}
                     {currentBook.type === "Rent" && (
                       <button onClick={() => isAuthenticated ? setShowModal('borrow') : navigate("/login")}
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
+                        className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
                         <BookOpen className="w-4 h-4" /> Request to Borrow
                       </button>
                     )}
                     {currentBook.type === "Exchange" && (
                       <button onClick={() => isAuthenticated ? setShowModal('exchange') : navigate("/login")}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
+                        className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-semibold py-3 rounded-xl transition text-[14px] flex items-center justify-center gap-2">
                         <ArrowLeftRight className="w-4 h-4" /> Request Exchange
                       </button>
                     )}

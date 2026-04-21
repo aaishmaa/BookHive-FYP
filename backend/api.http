@@ -1,0 +1,839 @@
+@baseUrl = http://localhost:5000/api
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5ZDlmNjBlM2QxYTBmODVkZTNiNGFiZiIsImlhdCI6MTc3NTk2NDUzNiwiZXhwIjoxNzc2NTY5MzM2fQ.ZL0QIOx7wrZiJ0xtNEA1PVMSSVYMvDHahn6cUld5gLQ
+
+### Register
+
+POST http://localhost:5000/auth/signup
+Content-Type: application/json
+
+{
+  "name": "test",
+  "email": "test@test.com",
+  "password": "123456"
+}
+
+###duplicate user
+POST http://localhost:5000/auth/signup
+Content-Type: application/json
+
+{
+  "name": "test",
+  "email": "test@test.com",
+  "password": "123456"
+}
+POST http://localhost:5000/auth/signup
+Content-Type: application/json
+### new register
+{
+  "name": "user",
+  "email": "user@gmail.com",
+  "password": "1234567"
+}
+
+### Login User
+POST http://localhost:5000/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@test.com",
+  "password": "123456"
+}
+###
+POST http://localhost:5000/auth/login
+Content-Type: application/json
+
+{
+  "email": "adhipuspa1@gmail.com",
+  "password": "Puspa@123"
+}
+###
+GET http://localhost:5000/requests
+Cookie: token=USER_TOKEN
+###
+PATCH http://localhost:5000/requests/69da961d308d3caebb09de33
+Content-Type: application/json
+Cookie: token=
+
+{
+  "status": "Accepted"
+}
+
+{
+  "status": "Accepted"
+}
+
+### Login User with wrong password
+POST http://localhost:5000/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@test.com",
+  "password": "wrong123"
+}
+
+### Check Auth with cookie
+GET http://localhost:5000/auth/check-auth
+
+###Check Auth with out Cookie
+GET http://localhost:5000/auth/check-auth
+
+
+### Admin Login
+POST http://localhost:5000/auth/login
+Content-Type: application/json
+
+{
+  "email": "aaishmamanandhar023@gmail.com",
+  "password": "Aaishma@123"
+}
+### Student token 
+GET http://localhost:5000/admin/stats
+Cookie: token={{token}}
+
+### Admin token 
+GET http://localhost:5000/admin/stats
+Cookie: token={{adminToken}}
+
+### non admin account login
+POST http://localhost:5000/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@gmail.com",
+  "password": "123456"
+}
+
+### Admin Stats (Dashboard aggregation)
+GET http://localhost:5000/admin/stats
+Cookie: token={{adminToken}}
+
+### Get all books as admin
+GET http://localhost:5000/admin/books
+Cookie: token={{adminToken}}
+
+### Admin Delete Book
+DELETE http://localhost:5000/admin/books/69e53b442109607cda2f85c4
+Cookie: token={{adminToken}}
+
+### Get all books as admin
+GET http://localhost:5000/admin/books
+Cookie: token={{adminToken}}
+
+### Upload Book (Positive)
+POST http://localhost:5000/books
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Physics Book",
+  "price": 500,
+  "category": "Science",
+  "type": "Sell"
+}
+### Get All Books
+GET http://localhost:5000/books
+
+### POST valid book
+
+POST http://localhost:5000/books
+Content-Type: application/json
+Cookie: token=YOUR_TOKEN_HERE
+
+{
+  "title": "Test Book",
+  "author": "Test Author",
+  "type": "Sell",
+  "price": 500,
+  "condition": "Good",
+  "category": "Science"
+}
+
+### Upload Book (Negative - Missing Title)
+
+POST http://localhost:5000/books
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "price": 500,
+  "category": "Science"
+}
+###Delete own book
+DELETE http://localhost:5000/books/69da85f3c2651a7d5938b649
+Cookie: 112102
+###
+GET http://localhost:5000/books
+Cookie: Cookie: 112102
+
+
+### Search by title keyword
+GET http://localhost:5000/books?search=physics
+Cookie: token={{token}}
+
+### Search Book by Title
+GET http://localhost:5000/books?search=Physics
+
+### Filter by Category
+GET http://localhost:5000/books?category=Science
+
+###Filter by Type
+GET http://localhost:5000/books?type=Sell
+
+### Combined search + filter
+GET http://localhost:5000/books?search=physics&level=Bachelor&type=Sell
+Cookie: token={{token}}
+
+
+
+### Search for a book that does not exist
+GET http://localhost:5000/books?search=UnknownBook123
+
+### Update Book
+PATCH http://localhost:5000/books/69da85b4c2651a7d5938b644
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "price": 600,
+  "title": "Updated Physics Book"
+}
+### without token
+### Update Book (NO TOKEN - SECURITY TEST)
+PATCH {{baseUrl}}/books/REAL_BOOK_ID
+Content-Type: application/json
+Cookie: token=;
+
+{
+  "price": 900
+}
+
+### Update Book (INVALID TOKEN)
+PATCH {{baseUrl}}/books/REAL_BOOK_ID
+Authorization: Bearer wrongtoken123
+Content-Type: application/json
+
+{
+  "price": 700
+}
+
+### Delete Book
+DELETE http://localhost:5000/books/69da85b4c2651a7d5938b644
+Cookie: Bearer {{token}}
+
+### getrealbookid
+GET http://localhost:5000/books
+
+//Exchange Request
+### 3.1 Get Received Requests (Positive)
+GET http://localhost:5000/requests
+Cookie: token={{token}}
+###
+POST http://localhost:5000/requests
+Content-Type: application/json
+Cookie: token=112102
+
+{
+  "bookId": "69e303956225aa27cb4c94b4",
+  "type": "Exchange"
+}
+
+###
+GET http://localhost:5000/requests
+Cookie: token=Y112102
+
+69e671fbe8dcbf6bdf2f4886
+###
+PATCH http://localhost:5000/requests/69e671fbe8dcbf6bdf2f4886/status
+Content-Type: application/json
+Cookie: token=112102
+POST http://localhost:5000/requests
+Content-Type: application/json
+Cookie: token=YOUR_TOKEN_HERE
+
+###
+###
+POST http://localhost:5000/requests
+Content-Type: application/json
+Cookie: token=YOUR_TOKEN_HERE
+
+{
+  "bookId": "69e671fbe8dcbf6bdf2f4886",
+  "type": "Borrow",
+  "senderName": "Aaishma Manandhar",
+  "message": "I would like to borrow this book",
+  "returnBy": "2026-05-20"
+}
+
+{
+  "status": "Accepted"
+}
+GET http://localhost:5000/books
+###Duplicate request
+POST http://localhost:5000/auth/login
+Content-Type: application/json
+###
+GET http://localhost:5000/requests
+Cookie: token=112102
+
+###
+PATCH http://localhost:5000/requests/[]/status
+Content-Type: application/json
+Cookie: token=112102
+
+
+{
+  "status": "Accepted"
+}
+
+### 3.2 Get Sent Requests (Positive)
+GET http://localhost:5000/requests/sent
+Cookie: token={{token}}
+
+###
+
+### 3.3 Get Requests – No Auth (Security Test)
+GET http://localhost:5000/requests
+
+###
+GET http://localhost:5000/books
+
+### 3.4 Send Exchange Request – Valid (Positive)
+POST http://localhost:5000/requests
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bookId": "69e303956225aa27cb4c94b4",
+  "type": "Exchange",
+  "offerBookTitle": "My Physics Book",
+  "offerBookImg": "",
+  "offer": "My Physics Book",
+  "senderName": "Aaishma Manandhar",
+  "message": "I would like to exchange this book!"
+}
+
+###
+
+### 3.5 Send Borrow Request – Valid (Positive)
+POST {{baseUrl}}/requests
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bookId": "69e303956225aa27cb4c94b4",
+  "type": "Borrow",
+  "returnBy": "2025-08-01",
+  "senderName": "Aaishma Manandhar",
+  "message": "I will return it by August."
+}
+
+###
+
+### 3.6 Send Request – Own Book (Negative)
+POST {{baseUrl}}/requests
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bookId": "PASTE_YOUR_OWN_BOOK_ID",
+  "type": "Exchange",
+  "senderName": "Aaishma Manandhar"
+}
+
+### Get requests YOU sent
+GET {{baseUrl}}/requests/sent
+Cookie: token={{token}}
+
+### Get received requests
+GET {{baseUrl}}/requests
+Cookie: token={{token}}
+
+### 3.7 Accept Request 
+PATCH {{baseUrl}}/requests/69e54514d0ce9e3cfd2abe5f
+Cookie: token=AAYUSH_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "status": "Accepted"
+}
+
+###
+
+### 3.8 Decline Request 
+PATCH {{baseUrl}}/requests/69e54514d0ce9e3cfd2abe5f
+Cookie: token=AAYUSH_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "status": "Declined"
+}
+###
+
+### 3.9 Accept Request – No Auth (Security Test)
+PATCH {{baseUrl}}/requests/PASTE_REQUEST_ID
+Content-Type: application/json
+
+{
+  "status": "Accepted"
+}
+
+###
+
+### 3.10 Get Requests for Specific Book
+GET {{baseUrl}}/requests/book/69e303956225aa27cb4c94b4
+Cookie: token={{token}}
+
+###
+
+### ───────────────────────────────────────────────────────────────
+### SECTION 4: WISHLIST
+### ───────────────────────────────────────────────────────────────
+
+@baseUrl = http://localhost:5000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5YzdlODNlZjZlNThlODkzN2U5NTY3YiIsImlhdCI6MTc3NjU0MzYxNiwiZXhwIjoxNzc3MTQ4NDE2fQ.XRRgY7gSALWO_s2OhIWo1QnES-f6oI74x_VU-qK8JKA
+
+### 4.1 Get Wishlist
+GET {{baseUrl}}/wishlist
+Cookie: token={{token}}
+
+###
+
+### 4.2 Get Wishlist – No Auth (Security Test)
+GET {{baseUrl}}/wishlist
+
+###
+
+### 4.3 Add to Wishlist (Positive)
+POST {{baseUrl}}/wishlist
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bookId": "69e2f6b86225aa27cb4c90ec"
+}
+
+###
+
+
+
+### ───────────────────────────────────────────────────────────────
+### SECTION 5: REVIEWS
+### ───────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 5: REVIEWS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@baseUrl     = http://localhost:5000
+@token       = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5YzdlODNlZjZlNThlODkzN2U5NTY3YiIsImlhdCI6MTc3NjU0NDgxNSwiZXhwIjoxNzc3MTQ5NjE1fQ.Ol_ABe9XEUGbv6FJOngywO6TkqO_lNu9a2xw1HGV7mE
+@adminToken  = PASTE_ADMIN_TOKEN_HERE
+@sellBookId  = 69e2f6b86225aa27cb4c90ec
+@exchangeBookId = 69e303956225aa27cb4c94b4
+@rentBookId  = 69e2fb4b6225aa27cb4c92ec
+@userId      = 69c7e83ef6e58e8937e9567b
+@sellerId    = 69a27336bb6215415ed6c5a0
+
+### 5.1 Get Reviews for a Book (Positive)
+GET {{baseUrl}}/reviews/{{sellBookId}}
+Cookie: token={{token}}
+
+### 5.2 Submit Review – Valid (Positive)
+POST {{baseUrl}}/reviews/{{sellBookId}}
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "text": "Excellent book, very well maintained and exactly as described!"
+}
+
+###
+
+### 5.3 Submit Review – Duplicate (Negative) → expect 400
+POST {{baseUrl}}/reviews/{{sellBookId}}
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "rating": 3,
+  "text": "Trying to review again..."
+}
+
+###
+
+### 5.4 Submit Review – Missing Rating (Negative) → expect 400
+POST {{baseUrl}}/reviews/{{sellBookId}}
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "text": "Good book but no rating given"
+}
+
+###
+
+### 5.5 Submit Review – No Auth (Security Test) → expect 401
+POST {{baseUrl}}/reviews/{{sellBookId}}
+Content-Type: application/json
+
+{
+  "rating": 4,
+  "text": "Unauthorized review attempt"
+}
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 6: NOTIFICATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 6.1 Get Notifications (Positive) → expect 200
+GET {{baseUrl}}/notifications
+Cookie: token={{token}}
+
+###
+
+### 6.2 Get Notifications – No Auth (Security Test) → expect 401
+GET {{baseUrl}}/notifications
+
+###
+
+### 6.3 Mark All Notifications as Read → expect 200
+PATCH {{baseUrl}}/notifications/read-all
+Cookie: token={{token}}
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 7: PAYMENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 7.1 Initiate Khalti Payment (Positive) → expect 200 or 500 (Khalti sandbox)
+POST {{baseUrl}}/payment/initiate
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bookId": "{{sellBookId}}",
+  "amount": 300,
+  "bookTitle": "A Heritage of Biology",
+  "customerName": "Aaishma Manandhar",
+  "customerPhone": "9800000000",
+  "customerEmail": "aaishmamanandhar023@gmail.com"
+}
+
+###
+
+### 7.2 Initiate Payment – Missing bookId (Negative) → expect 400
+POST {{baseUrl}}/payment/initiate
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "amount": 490,
+  "bookTitle": "No Book ID Test"
+}
+
+###
+
+### 7.3 Initiate Payment – No Auth (Security Test) → expect 401
+POST {{baseUrl}}/payment/initiate
+Content-Type: application/json
+
+{
+  "bookId": "{{sellBookId}}",
+  "amount": 490
+}
+
+###
+
+### 7.4 Cash on Delivery – Valid (Positive) → expect 200
+POST {{baseUrl}}/payment/cod
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bookId": "{{sellBookId}}",
+  "bookTitle": "A Heritage of Biology",
+  "amount": 300,
+  "sellerName": "Aaisha Manandhar",
+  "buyerName": "Aaishma Manandhar",
+  "delivery": {
+    "name": "Aaishma Manandhar",
+    "address": "Kathmandu, Baneshwor",
+    "city": "Kathmandu",
+    "pin": "44600",
+    "phone": "9800000000"
+  }
+}
+
+###
+
+### 7.5 COD – Book Not Found (Negative) → expect 404
+POST {{baseUrl}}/payment/cod
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bookId": "000000000000000000000000",
+  "bookTitle": "Ghost Book",
+  "amount": 100,
+  "delivery": {
+    "name": "Test",
+    "address": "KTM",
+    "city": "KTM",
+    "pin": "44600",
+    "phone": "9800000000"
+  }
+}
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 8: TRANSACTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 8.1 Get All Transactions (Positive) → expect 200
+GET {{baseUrl}}/transactions
+Cookie: token={{token}}
+
+###
+
+### 8.2 Filter – Purchases Only → expect 200
+GET {{baseUrl}}/transactions?type=purchase
+Cookie: token={{token}}
+
+###
+
+### 8.3 Filter – Sales Only → expect 200
+GET {{baseUrl}}/transactions?type=sale
+Cookie: token={{token}}
+
+###
+
+### 8.4 Transactions – No Auth (Security Test) → expect 401
+GET {{baseUrl}}/transactions
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 9: PROFILE
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 9.1 Get My Profile (Positive) → expect 200
+GET {{baseUrl}}/profile/me
+Cookie: token={{token}}
+
+###
+
+### 9.2 Get My Profile – No Auth (Security Test) → expect 401
+GET {{baseUrl}}/profile/me
+
+###
+
+### 9.3 Update Profile (Positive) → expect 200
+PATCH {{baseUrl}}/profile/me
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bio": "BCA student at Tribhuvan University. Book lover.",
+  "college": "Tribhuvan University",
+  "phone": "9800000000"
+}
+
+###
+
+### 9.4 Update Profile – Attempt to change email (Security Test)
+PATCH {{baseUrl}}/profile/me
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "email": "hacked@evil.com"
+}
+
+###
+
+### 9.5 Get Public Profile (Positive) → expect 200
+GET {{baseUrl}}/profile/user/{{sellerId}}
+Cookie: token={{token}}
+
+###
+
+### 9.6 Get Public Profile – Invalid ID (Negative) → expect 404
+GET {{baseUrl}}/profile/user/000000000000000000000000
+Cookie: token={{token}}
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 10: DIGITAL NOTES
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 10.1 Get All Notes (Positive) → expect 200
+GET {{baseUrl}}/notes
+Cookie: token={{token}}
+
+###
+
+### 10.2 Filter Notes by Category (Positive) → expect 200
+GET {{baseUrl}}/notes?category=Science
+Cookie: token={{token}}
+
+###
+
+### 10.3 Get My Notes (Positive) → expect 200
+GET {{baseUrl}}/notes/my
+Cookie: token={{token}}
+
+###
+
+### 10.4 Get Notes – No Auth (Security Test) → expect 401
+# GET /notes is public in your route (no verifyToken) so this returns 200 not 401
+GET {{baseUrl}}/notes
+
+###
+
+### 10.5 Upload Note – No Auth (Security Test) → expect 401
+POST {{baseUrl}}/notes
+Content-Type: multipart/form-data; boundary=boundary
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 11: ADMIN PANEL
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 11.1 Admin Login – run this first to get adminToken
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "aaishmamanandhar023@gmail.com",
+  "password": "Aaishma@123"
+}
+
+###
+
+### 11.2 Get Admin Stats (Positive) → expect 200
+GET {{baseUrl}}/admin/stats
+Cookie: token={{adminToken}}
+
+###
+
+### 11.3 Get Admin Stats – Student Token (Security Test) → expect 403
+GET {{baseUrl}}/admin/stats
+Cookie: token={{token}}
+
+###
+
+### 11.4 Get Admin Stats – No Token (Security Test) → expect 401
+GET {{baseUrl}}/admin/stats
+
+###
+
+### 11.5 Get All Users (Admin) → expect 200
+GET {{baseUrl}}/admin/users
+Cookie: token={{adminToken}}
+
+###
+
+### 11.6 Get All Books (Admin) → expect 200
+GET {{baseUrl}}/admin/books
+Cookie: token={{adminToken}}
+
+###
+
+### 11.7 Get Student Applications (Admin) → expect 200
+GET {{baseUrl}}/admin/students
+Cookie: token={{adminToken}}
+
+###
+
+### 11.8 Approve Student (Admin) → expect 200
+# First run 11.7 to get a real student ID, then paste it below
+PATCH {{baseUrl}}/admin/students/PASTE_STUDENT_PROFILE_ID_HERE
+Cookie: token={{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "approved"
+}
+
+###
+
+### 11.9 Decline Student (Admin) → expect 200
+PATCH {{baseUrl}}/admin/students/PASTE_STUDENT_PROFILE_ID_HERE
+Cookie: token={{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "declined"
+}
+
+###
+
+### 11.10 Admin Delete Book (Positive) → expect 200
+# Use a test book you don't need — it will be permanently deleted
+DELETE {{baseUrl}}/admin/books/{{sellBookId}}
+Cookie: token={{adminToken}}
+
+###
+
+### 11.11 Student Cannot Access Admin Route (Security Test) → expect 403
+DELETE {{baseUrl}}/admin/books/{{sellBookId}}
+Cookie: token={{token}}
+
+###
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 12: TOP SELLERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+### 12.1 Get Top Sellers (Positive) → expect 200
+GET {{baseUrl}}/top-sellers
+Cookie: token={{token}}
+
+###
+
+### 12.2 Get Top Sellers – No Auth (Security Test)
+GET {{baseUrl}}/top-sellers
+
+###Add book to wishlist → expect 201
+POST http://localhost:5000/wishlist
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bookId": "69e2fb4b6225aa27cb4c92ec"
+}
+### Get your wishlist
+GET http://localhost:5000/wishlist
+Cookie: token={{token}}
+
+### Remove from wishlist 
+DELETE http://localhost:5000/wishlist/69e5baab297867c183007d9b
+Cookie: token={{token}}
+
+
+### Initiate Khalti Payment
+POST http://localhost:5000/payment/initiate
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "bookId": "69e2f6b86225aa27cb4c90ec",
+  "amount": 300,
+  "bookTitle": "A Heritage of Biology",
+  "customerName": "Aaishma Manandhar",
+  "customerPhone": "9800000000",
+  "customerEmail": "aaishmamanandhar023@gmail.com"
+}
+
+### Verify Khalti Payment
+POST http://localhost:5000/payment/verify
+Cookie: token={{token}}
+Content-Type: application/json
+
+{
+  "pidx": "BuUBKs2UY3EZazYUYnMHQSE"
+}
