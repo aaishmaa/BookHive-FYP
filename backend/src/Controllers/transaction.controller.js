@@ -1,4 +1,4 @@
-import { Transaction } from '../Models/transaction.model.js';  // capital M
+import { Transaction } from '../models/transaction.model.js';  // capital M
 
 const fmt = (t) => ({
   id:        t._id,

@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { Transaction } from '../Models/transaction.model.js';
-import { Book }        from '../Models/book.model.js';
+import { Transaction } from '../models/transaction.model.js';
+import { Book }        from '../models/book.model.js';
 
 const KHALTI_SECRET = process.env.KHALTI_SECRET_KEY;
 const KHALTI_URL    = 'https://a.khalti.com/api/v2';

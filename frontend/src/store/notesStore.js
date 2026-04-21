@@ -8,10 +8,10 @@ const API_URL = import.meta.env.MODE === "development"
 axios.defaults.withCredentials = true;
 
 export const useNotesStore = create((set, get) => ({
-  notes:    [],
-  myNotes:  [],
+  notes:     [],
+  myNotes:   [],
   isLoading: false,
-  error:    null,
+  error:     null,
 
   fetchNotes: async (category = "") => {
     set({ isLoading: true, error: null });
@@ -51,4 +51,16 @@ export const useNotesStore = create((set, get) => ({
       throw err;
     }
   },
+
+  // ── ADD THIS ──────────────────────────────────────────────────────────────
+  downloadNote: async (noteId) => {
+  try {
+    await axios.patch(`${API_URL}/${noteId}/count`);
+    window.open(`${API_URL}/${noteId}/download`, '_blank');
+    return true;
+  } catch (err) {
+    console.error("Download failed:", err);
+    return null;
+  }
+},
 }));

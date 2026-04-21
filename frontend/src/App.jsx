@@ -115,7 +115,6 @@ function App() {
 
         {/* ── Student protected routes ── */}
         <Route path="/home"          element={<P><Home /></P>} />
-        <Route path="/Homepage"      element={<P><StudentDashboard /></P>} />
         <Route path="/browse"        element={<P><BrowsePage /></P>} />
         <Route path="/my-listings"   element={<P><MyListings /></P>} />
         <Route path="/requests"      element={<P><Requests /></P>} />

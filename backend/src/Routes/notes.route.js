@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/my',           verifyToken, getMyNotes);              // ← MUST be before /:id
 router.get('/',             getNotes);
 router.post('/',            verifyToken, uploadNote.single('file'), createNote);
-router.get('/:id/download', verifyToken, downloadNote);
+router.get('/:id/download', downloadNote);
 router.patch('/:id/count',  verifyToken, async (req, res) => {
   try {
     const note = await Notes.findById(req.params.id);

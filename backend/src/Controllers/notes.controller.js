@@ -1,7 +1,10 @@
-import { Notes } from '../models/notes.model.js';
-import { User }  from '../models/user.model.js';
-import cloudinary from '../Config/cloudinary.config.js';
-import https from 'https';
+import { Notes }  from '../models/notes.model.js';
+import { User }   from '../models/user.model.js';
+import fs         from 'fs';
+import path       from 'path';
+
+const UPLOADS_DIR = 'uploads/notes';
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 export const getNotes = async (req, res) => {
   try {
@@ -14,10 +17,9 @@ export const getNotes = async (req, res) => {
   }
 };
 
-// ── GET /notes/my ─────────────────────────────────────────────────────────────
 export const getMyNotes = async (req, res) => {
   try {
-    const notes = await Notes.find({ userId: req.userId }).sort({ createdAt: -1 }); // ← Notes not Note
+    const notes = await Notes.find({ userId: req.userId }).sort({ createdAt: -1 });
     res.json({ notes });
   } catch (err) {
     res.status(500).json({ msg: err.message });
@@ -26,30 +28,37 @@ export const getMyNotes = async (req, res) => {
 
 export const createNote = async (req, res) => {
   try {
-    const { title, category } = req.body;
+    const { title, category, level, classYear } = req.body;
+
     if (!req.file)
       return res.status(400).json({ success: false, message: 'PDF file is required' });
 
-    const uploadResult = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: 'bookhive/notes', resource_type: 'raw',
-          public_id: `${Date.now()}-${req.file.originalname.replace(/\s+/g, '_')}` },
-        (error, result) => error ? reject(error) : resolve(result)
-      );
-      stream.end(req.file.buffer);
-    });
+    // Save buffer to disk
+    const filename = `${Date.now()}-${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const filepath  = path.join(UPLOADS_DIR, filename);
+    fs.writeFileSync(filepath, req.file.buffer);
 
-    const fileUrl = uploadResult.secure_url || uploadResult.url;
-    if (!fileUrl)
-      return res.status(500).json({ success: false, message: 'Failed to get file URL from Cloudinary' });
+    // Store relative URL — served via express static
+    const fileUrl = `/uploads/notes/${filename}`;
 
     const user = await User.findById(req.userId);
     if (!user)
       return res.status(404).json({ success: false, message: 'User not found' });
 
-    const note = await Notes.create({ userId: req.userId, seller: user.name, title, category, fileUrl });
+    const note = await Notes.create({
+      userId:    req.userId,
+      seller:    user.name,
+      title,
+      category,
+      level:     level     || '',
+      classYear: classYear || '',
+      fileUrl,
+      downloads: 0,
+    });
+
     res.status(201).json({ success: true, note });
   } catch (error) {
+    console.error('CREATE NOTE ERROR:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -60,18 +69,15 @@ export const downloadNote = async (req, res) => {
     if (!note)
       return res.status(404).json({ success: false, message: 'Note not found' });
 
-    const fetchUrl = (url) => new Promise((resolve, reject) => {
-      https.get(url, (r) => {
-        if (r.statusCode === 301 || r.statusCode === 302) {
-          fetchUrl(r.headers.location).then(resolve).catch(reject);
-        } else resolve(r);
-      }).on('error', reject);
-    });
+    // Build absolute file path
+    const filepath = path.join(process.cwd(), note.fileUrl);
 
-    const stream = await fetchUrl(note.fileUrl);
+    if (!fs.existsSync(filepath))
+      return res.status(404).json({ success: false, message: 'File not found on server' });
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${note.title}.pdf"`);
-    stream.pipe(res);
+    fs.createReadStream(filepath).pipe(res);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

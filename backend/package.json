@@ -3,20 +3,24 @@
   "version": "1.0.0",
   "type": "module",
   "main": "src/index.js",
+
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testEnvironment=node --forceExit --detectOpenHandles",
-    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --forceExit --detectOpenHandles"
+    "dev":             "nodemon src/index.js",
+
+    "test":            "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:auth":       "node --experimental-vm-modules node_modules/jest/bin/jest.js auth.test",
+    "test:books":      "node --experimental-vm-modules node_modules/jest/bin/jest.js books.test",
+    "test:requests":   "node --experimental-vm-modules node_modules/jest/bin/jest.js requests.test",
+    "test:wishlist":   "node --experimental-vm-modules node_modules/jest/bin/jest.js wishlist_reviews.test",
+    "test:admin":      "node --experimental-vm-modules node_modules/jest/bin/jest.js admin.test",
+    "test:payment": "node --experimental-vm-modules node_modules/jest/bin/jest.js src/Tests/paymentTransaction.test.js",
+    "test:models":     "node --experimental-vm-modules node_modules/jest/bin/jest.js models.test",
+    "test:routes":     "node --experimental-vm-modules node_modules/jest/bin/jest.js routes.test",
+    "test:middleware": "node --experimental-vm-modules node_modules/jest/bin/jest.js middleware.test",
+    "test:config":     "node --experimental-vm-modules node_modules/jest/bin/jest.js config.test",
+    "test:controllers":"node --experimental-vm-modules node_modules/jest/bin/jest.js controllers.test"
   },
-  "jest": {
-    "testEnvironment": "node",
-    "transform": {}
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+
   "dependencies": {
     "axios": "^1.15.0",
     "bcrypt": "^6.0.0",
@@ -32,11 +36,12 @@
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^7.0.10",
-    "nodemon": "^3.1.11",
     "socket.io": "^4.8.3"
   },
+
   "devDependencies": {
     "jest": "^30.3.0",
+    "nodemon": "^3.1.11",
     "supertest": "^7.2.2"
   }
 }

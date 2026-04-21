@@ -3,7 +3,7 @@ import {
   getConversations, getConversation,
   startConversation, sendMessage, markAsRead,
 } from '../Controllers/chat.controller.js';
-import { verifyToken } from '../Middlewares/verifyToken.js';
+import { verifyToken } from '../Middlewares/VerifyToken.js';
 
 const router = express.Router();
 

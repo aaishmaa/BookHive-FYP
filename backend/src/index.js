@@ -18,9 +18,9 @@ import profileRoutes      from './Routes/profile.route.js';
 import topSellersRoutes   from './Routes/topSeller.route.js';
 import chatRoutes         from './Routes/chat.route.js';
 import adminRoutes        from './Routes/admin.route.js';
-import transactionRoutes from './Routes/transaction.route.js';
-import reviewRoutes from './Routes/review.route.js';
-import paymentRoutes from './Routes/payment.route.js';
+import transactionRoutes  from './Routes/transaction.route.js';
+import reviewRoutes       from './Routes/review.route.js';
+import paymentRoutes      from './Routes/payment.route.js';
 
 import { initSocket } from './socket.js';
 
@@ -29,13 +29,16 @@ dotenv.config();
 const app    = express();
 const server = createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: ['http://localhost:5173', 'http://localhost:5174'],
-    credentials: true,
-  }
-});
-initSocket(io);
+// ── Socket.io — skip in test mode to avoid port conflicts ─────────────────────
+if (process.env.NODE_ENV !== 'test') {
+  const io = new Server(server, {
+    cors: {
+      origin: ['http://localhost:5173', 'http://localhost:5174'],
+      credentials: true,
+    }
+  });
+  initSocket(io);
+}
 
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
 app.use(cors({
@@ -62,9 +65,9 @@ app.use('/top-sellers',   topSellersRoutes);
 app.use('/chat',          chatRoutes);
 app.use('/admin',         adminRoutes);
 app.use('/uploads',       express.static(path.join(process.cwd(), 'uploads')));
-app.use('/transactions', transactionRoutes);
-app.use('/reviews', reviewRoutes);
-app.use('/payment', paymentRoutes);
+app.use('/transactions',  transactionRoutes);
+app.use('/reviews',       reviewRoutes);
+app.use('/payment',       paymentRoutes);
 
 app.get('/', (req, res) => res.send('BookHive API is running!'));
 
@@ -73,12 +76,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Something went wrong!' });
 });
 
+// ── Connect DB and start server ───────────────────────────────────────────────
 dbConnect();
-const PORT = process.env.PORT || 5000;
 
-// ← CHANGE: only start server if NOT in test mode
 if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 5000;
   server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 }
 
-export default app;   
+export default app;   // ← Supertest imports this

@@ -1,61 +1,153 @@
-import request from 'supertest';
-import app from '../index.js';
+// backend/src/Tests/auth.test.js
+// Run: npm run test:auth
 
-describe('UT: Auth Controller', () => {
+import request  from 'supertest';
+import app      from '../index.js';
+import mongoose from 'mongoose';
 
-  test('UT-01: Signup with new unique email — should succeed', async () => {
-    const res = await request(app).post('/auth/signup').send({
-      name: 'sym liva',
-      email: `symliva@gmail.com`,   // unique every run
-      password: 'Test@1234'
-    });
-    console.log('UT-01:', res.statusCode, res.body.message);
-    expect([200, 201]).toContain(res.statusCode);
+// ── Shared state ──────────────────────────────────────────────────────────────
+let authCookie = '';
+
+const testUser = {
+  name:     'Test User',
+  email:    `testuser_${Date.now()}@gmail.com`,
+  password: 'Test@1234',
+};
+
+// ── Cleanup ───────────────────────────────────────────────────────────────────
+afterAll(async () => {
+  const { User } = await import('../models/user.model.js');
+  await User.deleteOne({ email: testUser.email });
+  await mongoose.connection.close();
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+describe('AUTH MODULE', () => {
+
+  // ── UT-01
+  test('UT-01 | Signup - valid data → 201', async () => {
+    const res = await request(app)
+      .post('/auth/signup')
+      .send(testUser);
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.msg).toBe('User created successfully');
+    expect(res.body.user).toBeDefined();
+    expect(res.body.user.email).toBe(testUser.email);
+    // Password must never be exposed
+    expect(res.body.user.password).toBeUndefined();
   });
 
-  test('UT-02: Signup with already existing email — should fail', async () => {
-    const res = await request(app).post('/auth/signup').send({
-      name: 'Aaishma',
-      email: 'aaishmamanandhar023@gmail.com',   // already in DB
-      password: 'Test@1234'
-    });
-    console.log('UT-02:', res.statusCode, res.body.message);
-    expect([400, 409]).toContain(res.statusCode);
+  // ── UT-02 
+  test('UT-02 | Signup - duplicate email → 400', async () => {
+    const res = await request(app)
+      .post('/auth/signup')
+      .send(testUser);
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.msg).toMatch(/already exists/i);
   });
 
-  test('UT-03: Login with valid verified credentials — should set cookie', async () => {
-    const res = await request(app).post('/auth/login').send({
-      email: 'aaishmamanandhar023@gmail.com',
-      password: 'Aaishma@123'    // ← your real password
-    });
-    const cookie = res.headers['set-cookie'];
-    console.log('UT-03:', res.statusCode);
-    console.log('UT-03 Cookie:', cookie ? 'SET ✓' : 'NOT SET ✗');
-    expect([200, 201]).toContain(res.statusCode);
+  // ── UT-03 
+  test('UT-03 | Signup - missing fields → 400', async () => {
+    const res = await request(app)
+      .post('/auth/signup')
+      .send({ email: 'incomplete@gmail.com' }); // missing name + password
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.msg).toMatch(/fill in all fields/i);
   });
 
-  test('UT-04: Login with wrong password — should fail', async () => {
-    const res = await request(app).post('/auth/login').send({
-      email: 'aaishmamanandhar023@gmail.com',
-      password: 'wrongpassword123'
-    });
-    console.log('UT-04:', res.statusCode, res.body.message);
-    expect([400, 401]).toContain(res.statusCode);
+  // ── UT-04 
+  test('UT-04 | Login - wrong password → 400', async () => {
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: testUser.email, password: 'WrongPass@99' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.msg).toMatch(/invalid credentials/i);
   });
 
-  test('UT-05: Login with missing password — should fail', async () => {
-    const res = await request(app).post('/auth/login').send({
-      email: 'aaishmamanandhar023@gmail.com'
-      // no password
-    });
-    console.log('UT-05:', res.statusCode);
-    expect([400, 401, 500]).toContain(res.statusCode);
+  // ── UT-05 
+  test('UT-05 | Login - non-existent email → 400', async () => {
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: 'nobody@nowhere.com', password: 'Test@1234' });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.msg).toMatch(/invalid credentials/i);
   });
 
-  test('UT-06: Logout — should clear session', async () => {
-    const res = await request(app).post('/auth/logout');
-    console.log('UT-06:', res.statusCode, res.body.message);
-    expect([200, 201]).toContain(res.statusCode);
+  // ── UT-06 
+  test('UT-06 | Login - valid credentials → 200 + cookie', async () => {
+    // Mark user as verified directly in DB 
+    const { User } = await import('../models/user.model.js');
+    await User.findOneAndUpdate(
+      { email: testUser.email },
+      { isVerfied: true }
+    );
+
+    const res = await request(app)
+      .post('/auth/login')
+      .send({ email: testUser.email, password: testUser.password });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.msg).toBe('Logged in successfully');
+    expect(res.body.user).toBeDefined();
+    expect(res.body.user.email).toBe(testUser.email);
+    expect(res.body.user.password).toBeUndefined();
+
+    // Save cookie for subsequent tests
+    const cookies = res.headers['set-cookie'];
+    expect(cookies).toBeDefined();
+    authCookie = cookies[0].split(';')[0]; 
   });
+
+  // ── UT-07 
+  test('UT-07 | Check Auth - valid cookie → 200', async () => {
+    const res = await request(app)
+      .get('/auth/check-auth')
+      .set('Cookie', authCookie);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.user).toBeDefined();
+    expect(res.body.user.email).toBe(testUser.email);
+    // Password must not be returned (controller uses .select('-password'))
+    expect(res.body.user.password).toBeUndefined();
+  });
+
+  // ── UT-08 
+  test('UT-08 | Check Auth - no cookie → 401', async () => {
+    const res = await request(app)
+      .get('/auth/check-auth');
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  // ── UT-09 
+test('UT-09 | Logout → 200', async () => {
+  const res = await request(app)
+    .post('/auth/logout')
+    .set('Cookie', authCookie);
+
+  expect(res.statusCode).toBe(200);
+  expect(res.body.msg).toBe('Logged out successfully');
+
+  authCookie = ''; 
+});
+
+// ── UT-10 
+test('UT-10 | Check Auth after logout → 401', async () => {
+  // authCookie is now '' — no cookie sent, should get 401
+  const res = await request(app)
+    .get('/auth/check-auth');
+    // ← removed .set('Cookie', authCookie)
+
+  expect(res.statusCode).toBe(401);
+});
 
 });
+
+
+

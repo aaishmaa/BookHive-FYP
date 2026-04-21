@@ -2,20 +2,15 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Moon, Bell, Lock, Shield, HelpCircle,
-  LogOut, ChevronRight, TrendingUp, Star, Clock,
+  LogOut, ChevronRight, TrendingUp, Clock,
   Eye, EyeOff, Check, X, Loader,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import axios from "axios";
+import TopSellers from "../Components/TopSeller";   // ← import
 
 const API = import.meta.env.MODE === "development" ? "http://localhost:5000" : "";
-
-const topSellers = [
-  { name: "Priya Sharma", rating: "4.9", books: "24 books", initial: "P" },
-  { name: "Arjun Patel",  rating: "4.8", books: "18 books", initial: "A" },
-  { name: "Sara Khan",    rating: "4.7", books: "15 books", initial: "S" },
-];
 
 const recentUploads = [
   { title: "Data Structures & Algorithms", time: "2h ago" },
@@ -23,7 +18,6 @@ const recentUploads = [
   { title: "Business Law Notes",           time: "5h ago" },
 ];
 
-// ── Components ────────────────────────────────────────────────────────────────
 function SettingRow({ icon: Icon, label, onClick, danger = false }) {
   return (
     <button onClick={onClick}
@@ -66,7 +60,6 @@ function ToggleRow({ icon: Icon, label, value, onChange }) {
   );
 }
 
-// ── Change Password Modal ─────────────────────────────────────────────────────
 function ChangePasswordModal({ onClose }) {
   const [current,  setCurrent]  = useState("");
   const [newPass,  setNewPass]  = useState("");
@@ -82,7 +75,6 @@ function ChangePasswordModal({ onClose }) {
     if (!current || !newPass || !confirm) { setError("All fields are required."); return; }
     if (newPass.length < 6) { setError("New password must be at least 6 characters."); return; }
     if (newPass !== confirm) { setError("New passwords don't match."); return; }
-
     setLoading(true);
     try {
       await axios.patch(`${API}/auth/change-password`,
@@ -93,24 +85,18 @@ function ChangePasswordModal({ onClose }) {
       setTimeout(onClose, 1500);
     } catch (err) {
       setError(err.response?.data?.msg || "Failed to change password.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        onClick={e => e.stopPropagation()}
+        exit={{ opacity: 0, scale: 0.95 }} onClick={e => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-[400px] p-6">
-
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-[16px] font-bold text-gray-900">Change Password</h2>
-          <button onClick={onClose}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition text-xl">×</button>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition text-xl">×</button>
         </div>
-
         {success ? (
           <div className="flex flex-col items-center py-6 gap-3">
             <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -120,60 +106,38 @@ function ChangePasswordModal({ onClose }) {
           </div>
         ) : (
           <>
-            {/* Current Password */}
             <div className="mb-4">
               <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">Current Password</label>
               <div className="flex items-center border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#1C7C84] transition">
-                <input type={showCurr ? "text" : "password"}
-                  value={current} onChange={e => setCurrent(e.target.value)}
-                  placeholder="Enter current password"
-                  className="flex-1 outline-none text-[13px] text-gray-700 bg-transparent" />
+                <input type={showCurr ? "text" : "password"} value={current} onChange={e => setCurrent(e.target.value)}
+                  placeholder="Enter current password" className="flex-1 outline-none text-[13px] text-gray-700 bg-transparent" />
                 <button onClick={() => setShowCurr(!showCurr)} className="text-gray-400 hover:text-gray-600">
                   {showCurr ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
-
-            {/* New Password */}
             <div className="mb-4">
               <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">New Password</label>
               <div className="flex items-center border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-[#1C7C84] transition">
-                <input type={showNew ? "text" : "password"}
-                  value={newPass} onChange={e => setNewPass(e.target.value)}
-                  placeholder="Min 6 characters"
-                  className="flex-1 outline-none text-[13px] text-gray-700 bg-transparent" />
+                <input type={showNew ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)}
+                  placeholder="Min 6 characters" className="flex-1 outline-none text-[13px] text-gray-700 bg-transparent" />
                 <button onClick={() => setShowNew(!showNew)} className="text-gray-400 hover:text-gray-600">
                   {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
-
-            {/* Confirm Password */}
             <div className="mb-5">
               <label className="block text-[12.5px] font-semibold text-gray-700 mb-1.5">Confirm New Password</label>
               <div className={`flex items-center border rounded-xl px-3 py-2.5 transition
                 ${confirm && newPass !== confirm ? "border-red-300" : "border-gray-200 focus-within:border-[#1C7C84]"}`}>
-                <input type="password"
-                  value={confirm} onChange={e => setConfirm(e.target.value)}
-                  placeholder="Re-enter new password"
-                  className="flex-1 outline-none text-[13px] text-gray-700 bg-transparent" />
-                {confirm && (
-                  newPass === confirm
-                    ? <Check className="w-4 h-4 text-emerald-500" />
-                    : <X className="w-4 h-4 text-red-400" />
-                )}
+                <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
+                  placeholder="Re-enter new password" className="flex-1 outline-none text-[13px] text-gray-700 bg-transparent" />
+                {confirm && (newPass === confirm ? <Check className="w-4 h-4 text-emerald-500" /> : <X className="w-4 h-4 text-red-400" />)}
               </div>
             </div>
-
-            {error && (
-              <p className="text-[12px] text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{error}</p>
-            )}
-
+            {error && <p className="text-[12px] text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{error}</p>}
             <div className="flex gap-2">
-              <button onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">
-                Cancel
-              </button>
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
               <button onClick={handleSubmit} disabled={loading}
                 className="flex-1 py-2.5 rounded-xl bg-[#1C7C84] hover:bg-[#155f65] text-white text-[13px] font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60">
                 {loading ? <Loader className="w-4 h-4 animate-spin" /> : "Update Password"}
@@ -186,7 +150,6 @@ function ChangePasswordModal({ onClose }) {
   );
 }
 
-// ── Privacy Modal ─────────────────────────────────────────────────────────────
 function PrivacyModal({ onClose }) {
   const [showEmail,    setShowEmail]    = useState(true);
   const [showListings, setShowListings] = useState(true);
@@ -197,37 +160,26 @@ function PrivacyModal({ onClose }) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await axios.patch(`${API}/auth/privacy`,
-        { showEmail, showListings },
-        { withCredentials: true }
-      );
+      await axios.patch(`${API}/auth/privacy`, { showEmail, showListings }, { withCredentials: true });
       setSuccess(true);
       setTimeout(onClose, 1200);
     } catch (err) {
       setError(err.response?.data?.msg || "Failed to save settings.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        onClick={e => e.stopPropagation()}
+        exit={{ opacity: 0, scale: 0.95 }} onClick={e => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-[400px] p-6">
-
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-[16px] font-bold text-gray-900">Privacy Settings</h2>
-          <button onClick={onClose}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition text-xl">×</button>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition text-xl">×</button>
         </div>
-
         {success ? (
           <div className="flex flex-col items-center py-6 gap-3">
-            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-              <Check className="w-6 h-6 text-emerald-600" />
-            </div>
+            <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center"><Check className="w-6 h-6 text-emerald-600" /></div>
             <p className="text-[14px] font-semibold text-gray-800">Privacy settings saved!</p>
           </div>
         ) : (
@@ -236,16 +188,9 @@ function PrivacyModal({ onClose }) {
               <ToggleRow icon={Eye} label="Show email on profile" value={showEmail} onChange={setShowEmail} />
               <ToggleRow icon={Shield} label="Show my listings publicly" value={showListings} onChange={setShowListings} />
             </div>
-
-            {error && (
-              <p className="text-[12px] text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{error}</p>
-            )}
-
+            {error && <p className="text-[12px] text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{error}</p>}
             <div className="flex gap-2">
-              <button onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">
-                Cancel
-              </button>
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
               <button onClick={handleSave} disabled={loading}
                 className="flex-1 py-2.5 rounded-xl bg-[#1C7C84] hover:bg-[#155f65] text-white text-[13px] font-semibold transition flex items-center justify-center gap-2 disabled:opacity-60">
                 {loading ? <Loader className="w-4 h-4 animate-spin" /> : "Save Changes"}
@@ -258,56 +203,40 @@ function PrivacyModal({ onClose }) {
   );
 }
 
-// ── Settings Page ─────────────────────────────────────────────────────────────
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { logout } = useAuthStore();
-  const [darkMode,         setDarkMode]         = useState(false);
-  const [showPasswordModal,setShowPasswordModal] = useState(false);
-  const [showPrivacyModal, setShowPrivacyModal]  = useState(false);
+  const [darkMode,          setDarkMode]          = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showPrivacyModal,  setShowPrivacyModal]  = useState(false);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
+  const handleLogout = async () => { await logout(); navigate("/login"); };
 
   return (
     <div className="flex h-full overflow-hidden bg-gray-50">
-
-      {/* Modals */}
       <AnimatePresence>
         {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
         {showPrivacyModal  && <PrivacyModal        onClose={() => setShowPrivacyModal(false)} />}
       </AnimatePresence>
 
-      {/* Main */}
       <div className="flex-1 overflow-y-auto px-6 py-7">
         <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="text-2xl font-bold text-gray-900 mb-6">
-          Settings
-        </motion.h1>
-
+          className="text-2xl font-bold text-gray-900 mb-6">Settings</motion.h1>
         <div className="max-w-2xl">
           <SectionCard title="Preferences">
             <ToggleRow icon={Moon} label="Dark Mode" value={darkMode} onChange={setDarkMode} />
             <SettingRow icon={Bell} label="Notification Preferences" onClick={() => navigate("/notifications")} />
           </SectionCard>
-
           <SectionCard title="Account">
-            {/* ← Now opens modal and hits backend */}
             <SettingRow icon={Lock}   label="Change Password"  onClick={() => setShowPasswordModal(true)} />
             <SettingRow icon={Shield} label="Privacy Settings" onClick={() => setShowPrivacyModal(true)} />
           </SectionCard>
-
           <SectionCard title="Support">
             <SettingRow icon={HelpCircle} label="Help & Support" onClick={() => {}} />
           </SectionCard>
-
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <button onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-red-50 transition group">
+            <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-red-50 transition group">
               <LogOut className="w-[17px] h-[17px] text-red-400 shrink-0" />
               <span className="text-[13.5px] font-medium text-red-500">Log Out</span>
             </button>
@@ -315,7 +244,7 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      {/* Right Panel */}
+      {/* ── Right Panel — TopSellers from backend ── */}
       <aside className="w-[248px] shrink-0 bg-white border-l border-gray-200 overflow-y-auto">
         <div className="px-5 py-5 border-b border-gray-100">
           <div className="flex items-center gap-2 mb-3">
@@ -328,21 +257,7 @@ const SettingsPage = () => {
             ))}
           </div>
         </div>
-        <div className="px-5 py-5 border-b border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-            <h3 className="text-[13px] font-bold text-gray-800">Top Sellers</h3>
-          </div>
-          {topSellers.map(s => (
-            <div key={s.name} className="flex items-center gap-3 mb-4 last:mb-0">
-              <div className="w-9 h-9 rounded-full bg-[#D1E8EA] flex items-center justify-center text-[#1C7C84] text-[13px] font-bold shrink-0">{s.initial}</div>
-              <div>
-                <p className="text-[13px] font-semibold text-gray-800 leading-tight">{s.name}</p>
-                <p className="text-[11.5px] text-gray-400 mt-0.5"><span className="text-amber-400">★</span> {s.rating} · {s.books}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <TopSellers />  
         <div className="px-5 py-5">
           <div className="flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-gray-400" />

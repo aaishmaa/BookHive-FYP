@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, Truck, CreditCard, Tag, Loader } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Truck, CreditCard, Tag, Loader, QrCode, X, ExternalLink } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import axios from "axios";
 
@@ -22,6 +22,11 @@ const Checkout = () => {
   const [discount,setDiscount]= useState("");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
+
+  // QR modal state
+  const [showQR,      setShowQR]      = useState(false);
+  const [qrPaymentUrl,setQrPaymentUrl]= useState("");
+  const [qrLoading,   setQrLoading]   = useState(false);
 
   if (!book) {
     return (
@@ -44,6 +49,7 @@ const Checkout = () => {
     return true;
   };
 
+  // ── Initiate and redirect (normal flow) ──────────────────────────────────
   const handleKhalti = async () => {
     if (!validate()) return;
     setLoading(true);
@@ -61,7 +67,6 @@ const Checkout = () => {
         buyerName:     user?.name  || "Buyer",
       }, { withCredentials: true });
 
-      // Redirect to Khalti payment page
       if (res.data.payment_url) {
         window.location.href = res.data.payment_url;
       } else {
@@ -71,6 +76,36 @@ const Checkout = () => {
       setError(err?.response?.data?.msg || "Payment initiation failed.");
     }
     setLoading(false);
+  };
+
+  // ── Show QR code modal ────────────────────────────────────────────────────
+  const handleShowQR = async () => {
+    if (!validate()) return;
+    setQrLoading(true);
+    setError("");
+    try {
+      const res = await axios.post(`${API}/initiate`, {
+        bookId:        book._id,
+        amount:        total,
+        bookTitle:     book.title,
+        customerName:  name,
+        customerPhone: phone,
+        customerEmail: user?.email || "",
+        sellerId:      book.userId?._id || book.userId || "",
+        sellerName:    book.seller || "Seller",
+        buyerName:     user?.name  || "Buyer",
+      }, { withCredentials: true });
+
+      if (res.data.payment_url) {
+        setQrPaymentUrl(res.data.payment_url);
+        setShowQR(true);
+      } else {
+        setError("Failed to generate QR code.");
+      }
+    } catch (err) {
+      setError(err?.response?.data?.msg || "Failed to generate QR code.");
+    }
+    setQrLoading(false);
   };
 
   const handleCOD = async () => {
@@ -99,8 +134,98 @@ const Checkout = () => {
     else handleCOD();
   };
 
+  // QR code URL via Google Charts API (free, no library needed)
+  const qrImageUrl = qrPaymentUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrPaymentUrl)}`
+    : "";
+
   return (
     <div className="h-full overflow-y-auto bg-gray-50 px-6 py-8">
+
+      {/* ── QR Modal ── */}
+      <AnimatePresence>
+        {showQR && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+               onClick={() => setShowQR(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-[340px] p-6 text-center"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                       style={{ background: 'linear-gradient(135deg,#5C2D91,#7B4FBF)' }}>
+                    <span className="text-white text-[13px] font-bold">K</span>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[13px] font-bold text-gray-900">Khalti QR Payment</p>
+                    <p className="text-[11px] text-gray-400">Scan with Khalti app</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowQR(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Amount pill */}
+              <div className="inline-flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-full px-4 py-1.5 mb-4">
+                <span className="text-[13px] font-bold text-purple-700">Rs. {total}</span>
+                <span className="text-[11px] text-purple-400">· {book.title}</span>
+              </div>
+
+              {/* QR Code */}
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 mb-4 flex flex-col items-center">
+                {qrImageUrl ? (
+                  <img src={qrImageUrl} alt="Khalti QR Code" className="w-[200px] h-[200px] rounded-lg" />
+                ) : (
+                  <div className="w-[200px] h-[200px] flex items-center justify-center">
+                    <Loader className="w-8 h-8 animate-spin text-[#1C7C84]" />
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-400 mt-3">Open Khalti app → Scan QR → Pay</p>
+              </div>
+
+              {/* Steps */}
+              <div className="bg-purple-50 rounded-xl px-4 py-3 mb-4 text-left space-y-1.5">
+                {["Open Khalti app on your phone","Tap 'Scan' or 'QR Pay'","Scan this QR code","Confirm payment in app"].map((step, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-purple-200 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                      {i+1}
+                    </span>
+                    <p className="text-[12px] text-purple-800">{step}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-px flex-1 bg-gray-200" />
+                <span className="text-[11px] text-gray-400">or pay via browser</span>
+                <div className="h-px flex-1 bg-gray-200" />
+              </div>
+
+              {/* Open in browser button */}
+              <button
+                onClick={() => { setShowQR(false); window.location.href = qrPaymentUrl; }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-purple-300 text-purple-700 hover:bg-purple-50 font-semibold text-[13px] transition"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Open Khalti in Browser
+              </button>
+
+              <p className="text-[10.5px] text-gray-400 mt-3">
+                🔒 QR expires in 10 minutes. Do not close this page.
+              </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-3xl mx-auto">
         <button onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-medium mb-6 transition">
@@ -146,8 +271,9 @@ const Checkout = () => {
               </div>
               <div className="space-y-2.5">
                 {[
-                  { id: "khalti", label: "Khalti (Online Payment)", desc: "Pay securely via Khalti wallet or card", badge: "Recommended" },
-                  { id: "cod",    label: "Cash on Delivery",         desc: "Pay when the book arrives" },
+                  { id: "khalti",    label: "Khalti (Online Payment)", desc: "Pay via Khalti wallet or card",  badge: "Recommended" },
+                  { id: "khalti_qr", label: "Khalti QR Code",          desc: "Scan QR with Khalti app",       badge: "QR" },
+                  { id: "cod",       label: "Cash on Delivery",         desc: "Pay when the book arrives" },
                 ].map(opt => (
                   <div key={opt.id} onClick={() => setPayment(opt.id)}
                     className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 cursor-pointer transition
@@ -160,11 +286,15 @@ const Checkout = () => {
                       <p className="text-[13.5px] font-semibold text-gray-800">{opt.label}</p>
                       <p className="text-[11.5px] text-gray-400">{opt.desc}</p>
                     </div>
-                    {opt.badge && (
-                      <span className="text-[11px] font-bold bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full shrink-0">
-                        {opt.badge}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {opt.id === "khalti_qr" && <QrCode className="w-4 h-4 text-purple-500" />}
+                      {opt.badge && (
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full
+                          ${opt.badge === "QR" ? "bg-purple-100 text-purple-600" : "bg-purple-100 text-purple-600"}`}>
+                          {opt.badge}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -215,15 +345,31 @@ const Checkout = () => {
 
               {error && <p className="text-[12px] text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">{error}</p>}
 
-              <button onClick={handleOrder} disabled={loading}
-                className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-bold py-3 rounded-xl text-[14px] transition flex items-center justify-center gap-2 disabled:opacity-60">
-                {loading
-                  ? <><Loader className="w-4 h-4 animate-spin" /> Processing...</>
-                  : payment === "khalti" ? "💳 Pay with Khalti" : "📦 Place Order (COD)"
-                }
-              </button>
+              {/* ── Main action button ── */}
+              {payment === "khalti_qr" ? (
+                <button onClick={handleShowQR} disabled={qrLoading}
+                  className="w-full font-bold py-3 rounded-xl text-[14px] transition flex items-center justify-center gap-2 disabled:opacity-60"
+                  style={{ background: 'linear-gradient(135deg,#5C2D91,#7B4FBF)', color: 'white' }}>
+                  {qrLoading
+                    ? <><Loader className="w-4 h-4 animate-spin" /> Generating QR...</>
+                    : <><QrCode className="w-4 h-4" /> Show QR Code</>}
+                </button>
+              ) : (
+                <button onClick={handleOrder} disabled={loading}
+                  className="w-full bg-[#1C7C84] hover:bg-[#155f65] text-white font-bold py-3 rounded-xl text-[14px] transition flex items-center justify-center gap-2 disabled:opacity-60">
+                  {loading
+                    ? <><Loader className="w-4 h-4 animate-spin" /> Processing...</>
+                    : payment === "khalti"
+                      ? "💳 Pay with Khalti"
+                      : "📦 Place Order (COD)"
+                  }
+                </button>
+              )}
+
               <p className="text-[11px] text-gray-400 text-center mt-3">
-                {payment === "khalti" ? "🔒 Secured by Khalti" : "💵 Pay cash on delivery"}
+                {payment === "khalti"    ? " Secured by Khalti" :
+                 payment === "khalti_qr" ? "Scan with Khalti app" :
+                                          "Pay cash on delivery"}
               </p>
             </div>
           </motion.div>

@@ -1,8 +1,6 @@
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import cloudinary from '../Config/cloudinary.config.js';
-import path from 'path';
-import fs from 'fs';
 
 // Citizenship images
 const storage = new CloudinaryStorage({
@@ -24,18 +22,14 @@ const bookStorage = new CloudinaryStorage({
   },
 });
 
-// PDF notes — save to local disk
-const uploadsDir = 'uploads/notes';
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-const diskStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename:    (req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`),
-});
-
+// PDF notes — memory storage so req.file.buffer is available
 export const upload     = multer({ storage });
 export const uploadBook = multer({ storage: bookStorage });
-export const uploadNote = multer({ 
-  storage: diskStorage,
+export const uploadNote = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') cb(null, true);
+    else cb(new Error('Only PDF files allowed'), false);
+  },
 });

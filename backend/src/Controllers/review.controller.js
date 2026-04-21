@@ -1,4 +1,4 @@
-import { Review } from '../Models/review.model.js';
+import { Review } from '../models/review.model.js';
 
 // ── GET /reviews/:bookId ──────────────────────────────────────────────────────
 export const getReviews = async (req, res) => {

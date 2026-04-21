@@ -1,4 +1,4 @@
-// backend/src/socket.js
+
 // Socket.io setup — real-time messaging
 
 const onlineUsers = new Map(); // userId → socketId
@@ -17,7 +17,7 @@ export const initSocket = (io) => {
     // ── Join a conversation room ──────────────────────────────────────────────
     socket.on('conversation:join', (conversationId) => {
       socket.join(conversationId);
-      console.log(`📥 Joined room: ${conversationId}`);
+      console.log(` Joined room: ${conversationId}`);
     });
 
     // ── Leave a conversation room ─────────────────────────────────────────────

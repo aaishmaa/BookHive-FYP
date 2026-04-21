@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle, XCircle, Eye, User, Mail, Phone,
@@ -7,70 +7,11 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import axios from "axios";
 
-// ── Mock data (replace with real API data later) ──────────────────────────────
-const MOCK_STUDENTS = [
-  {
-    _id: "1",
-    fullName: "Aaishma Manandhar",
-    email: "aaishma@example.com",
-    phone: "9841234567",
-    age: 21,
-    gender: "Female",
-    address: "Lazimpat, Kathmandu",
-    location: "Kathmandu",
-    collegeName: "Tribhuvan University",
-    citizenshipFront: "https://placehold.co/600x380/1C7C84/white?text=Citizenship+Front",
-    citizenshipBack: "https://placehold.co/600x380/146C70/white?text=Citizenship+Back",
-    status: "pending",
-    createdAt: "2026-02-20T10:30:00Z",
-  },
-  {
-    _id: "2",
-    fullName: "Rohan Shrestha",
-    email: "rohan@example.com",
-    phone: "9807654321",
-    age: 23,
-    gender: "Male",
-    address: "Patan, Lalitpur",
-    location: "Lalitpur",
-    collegeName: "Kathmandu University",
-    citizenshipFront: "https://placehold.co/600x380/1C7C84/white?text=Citizenship+Front",
-    citizenshipBack: "https://placehold.co/600x380/146C70/white?text=Citizenship+Back",
-    status: "pending",
-    createdAt: "2026-02-21T14:15:00Z",
-  },
-  {
-    _id: "3",
-    fullName: "Priya Tamang",
-    email: "priya@example.com",
-    phone: "9823456789",
-    age: 20,
-    gender: "Female",
-    address: "Bhaktapur",
-    location: "Bhaktapur",
-    collegeName: "Pokhara University",
-    citizenshipFront: "https://placehold.co/600x380/1C7C84/white?text=Citizenship+Front",
-    citizenshipBack: "https://placehold.co/600x380/146C70/white?text=Citizenship+Back",
-    status: "approved",
-    createdAt: "2026-02-19T09:00:00Z",
-  },
-  {
-    _id: "4",
-    fullName: "Bikash Gurung",
-    email: "bikash@example.com",
-    phone: "9812345678",
-    age: 22,
-    gender: "Male",
-    address: "Pokhara",
-    location: "Pokhara",
-    collegeName: "Pokhara University",
-    citizenshipFront: "https://placehold.co/600x380/1C7C84/white?text=Citizenship+Front",
-    citizenshipBack: "https://placehold.co/600x380/146C70/white?text=Citizenship+Back",
-    status: "declined",
-    createdAt: "2026-02-18T16:45:00Z",
-  },
-];
+const API = import.meta.env.MODE === "development"
+  ? "http://localhost:5000"
+  : "";
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
@@ -119,13 +60,13 @@ const StudentDetailModal = ({ student, onClose, onApprove, onDecline }) => {
   const [lightbox, setLightbox] = useState(null);
 
   const fields = [
-    { icon: Mail,           label: "Email",       value: student.email },
-    { icon: Phone,          label: "Phone",       value: student.phone },
-    { icon: Calendar,       label: "Age",         value: `${student.age} years` },
-    { icon: User,           label: "Gender",      value: student.gender },
-    { icon: MapPin,         label: "Address",     value: student.address },
-    { icon: MapPin,         label: "Location",    value: student.location },
-    { icon: GraduationCap,  label: "College",     value: student.collegeName },
+    { icon: Mail,          label: "Email",    value: student.email },
+    { icon: Phone,         label: "Phone",    value: student.phone },
+    { icon: Calendar,      label: "Age",      value: student.age ? `${student.age} years` : "N/A" },
+    { icon: User,          label: "Gender",   value: student.gender || "N/A" },
+    { icon: MapPin,        label: "Address",  value: student.address || "N/A" },
+    { icon: MapPin,        label: "Location", value: student.location || "N/A" },
+    { icon: GraduationCap, label: "College",  value: student.collegeName || "N/A" },
   ];
 
   return (
@@ -181,30 +122,33 @@ const StudentDetailModal = ({ student, onClose, onApprove, onDecline }) => {
             </div>
 
             {/* Citizenship Documents */}
-            <div>
-              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
-                Citizenship Documents
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { src: student.citizenshipFront, label: "Front Side" },
-                  { src: student.citizenshipBack,  label: "Back Side"  },
-                ].map(({ src, label }) => (
-                  <div key={label} className="relative group rounded-xl overflow-hidden border-2 border-[#1C7C84]/30 cursor-pointer"
-                    onClick={() => setLightbox({ src, label })}
-                  >
-                    <img src={src} alt={label} className="w-full h-36 object-cover" />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition flex items-center justify-center">
-                      <ZoomIn className="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition" />
+            {(student.citizenshipFront || student.citizenshipBack) && (
+              <div>
+                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
+                  Citizenship Documents
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { src: student.citizenshipFront, label: "Front Side" },
+                    { src: student.citizenshipBack,  label: "Back Side"  },
+                  ].filter(d => d.src).map(({ src, label }) => (
+                    <div key={label}
+                      className="relative group rounded-xl overflow-hidden border-2 border-[#1C7C84]/30 cursor-pointer"
+                      onClick={() => setLightbox({ src, label })}
+                    >
+                      <img src={src} alt={label} className="w-full h-36 object-cover" />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition flex items-center justify-center">
+                        <ZoomIn className="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition" />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-[#1C7C84] py-1 text-center">
+                        <span className="text-white text-xs font-semibold">{label}</span>
+                      </div>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-[#1C7C84] py-1 text-center">
-                      <span className="text-white text-xs font-semibold">{label}</span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2 text-center">Click image to enlarge</p>
               </div>
-              <p className="text-xs text-gray-400 mt-2 text-center">Click image to enlarge</p>
-            </div>
+            )}
 
             {/* Action Buttons */}
             {student.status === "pending" && (
@@ -262,42 +206,85 @@ const AdminStudentReview = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuthStore();
 
-  const [students, setStudents] = useState(MOCK_STUDENTS);
-  const [selected, setSelected] = useState(null);
-  const [search, setSearch] = useState("");
+  const [students,     setStudents]     = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState("");
+  const [selected,     setSelected]     = useState(null);
+  const [search,       setSearch]       = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  const handleApprove = (id) => {
-    setStudents((prev) =>
-      prev.map((s) => (s._id === id ? { ...s, status: "approved" } : s))
-    );
+  // ── Fetch students from backend ─────────────────────────────────────────────
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get(`${API}/admin/students`, {
+          withCredentials: true,
+        });
+        setStudents(res.data.students || []);
+      } catch (err) {
+        console.error("Failed to fetch students:", err);
+        setError("Failed to load students. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStudents();
+  }, []);
+
+  // ── Approve student ─────────────────────────────────────────────────────────
+  const handleApprove = async (id) => {
+    try {
+      await axios.patch(
+        `${API}/admin/students/${id}`,
+        { status: "approved" },
+        { withCredentials: true }
+      );
+      setStudents(prev =>
+        prev.map(s => s._id === id ? { ...s, status: "approved" } : s)
+      );
+    } catch (err) {
+      console.error("Approve failed:", err);
+      alert("Failed to approve student. Please try again.");
+    }
   };
 
-  const handleDecline = (id) => {
-    setStudents((prev) =>
-      prev.map((s) => (s._id === id ? { ...s, status: "declined" } : s))
-    );
+  // ── Decline student ─────────────────────────────────────────────────────────
+  const handleDecline = async (id) => {
+    try {
+      await axios.patch(
+        `${API}/admin/students/${id}`,
+        { status: "declined" },
+        { withCredentials: true }
+      );
+      setStudents(prev =>
+        prev.map(s => s._id === id ? { ...s, status: "declined" } : s)
+      );
+    } catch (err) {
+      console.error("Decline failed:", err);
+      alert("Failed to decline student. Please try again.");
+    }
   };
 
   const handleLogout = async () => {
     await logout();
-    navigate("/Login");
+    navigate("/login");
   };
 
   const filtered = students.filter((s) => {
     const matchSearch =
-      s.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      s.email.toLowerCase().includes(search.toLowerCase()) ||
-      s.collegeName.toLowerCase().includes(search.toLowerCase());
+      s.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+      s.email?.toLowerCase().includes(search.toLowerCase()) ||
+      s.collegeName?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "all" || s.status === filterStatus;
     return matchSearch && matchStatus;
   });
 
   const counts = {
     all:      students.length,
-    pending:  students.filter((s) => s.status === "pending").length,
-    approved: students.filter((s) => s.status === "approved").length,
-    declined: students.filter((s) => s.status === "declined").length,
+    pending:  students.filter(s => s.status === "pending").length,
+    approved: students.filter(s => s.status === "approved").length,
+    declined: students.filter(s => s.status === "declined").length,
   };
 
   return (
@@ -347,10 +334,10 @@ const AdminStudentReview = () => {
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
         >
           {[
-            { label: "Total",    count: counts.all,      color: "text-gray-700",   bg: "bg-gray-100"   },
-            { label: "Pending",  count: counts.pending,  color: "text-yellow-700", bg: "bg-yellow-50"  },
-            { label: "Approved", count: counts.approved, color: "text-green-700",  bg: "bg-green-50"   },
-            { label: "Declined", count: counts.declined, color: "text-red-600",    bg: "bg-red-50"     },
+            { label: "Total",    count: counts.all,      color: "text-gray-700",   bg: "bg-gray-100"  },
+            { label: "Pending",  count: counts.pending,  color: "text-yellow-700", bg: "bg-yellow-50" },
+            { label: "Approved", count: counts.approved, color: "text-green-700",  bg: "bg-green-50"  },
+            { label: "Declined", count: counts.declined, color: "text-red-600",    bg: "bg-red-50"    },
           ].map(({ label, count, color, bg }) => (
             <div key={label} className={`${bg} rounded-xl px-5 py-4 border border-gray-100 shadow-sm`}>
               <p className={`text-2xl font-bold ${color}`}>{count}</p>
@@ -391,13 +378,40 @@ const AdminStudentReview = () => {
           </div>
         </motion.div>
 
-        {/* Student Cards */}
-        {filtered.length === 0 ? (
+        {/* Loading state */}
+        {loading && (
+          <div className="flex justify-center py-16">
+            <div className="w-8 h-8 border-4 border-[#1C7C84] border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* Error state */}
+        {!loading && error && (
+          <div className="text-center py-16">
+            <p className="text-red-400 text-sm">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 text-[#1C7C84] text-sm font-semibold hover:underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && !error && filtered.length === 0 && (
           <div className="text-center py-16 text-gray-400">
             <User className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No students found</p>
+            <p className="text-sm">
+              {students.length === 0
+                ? "No student applications yet"
+                : "No students match your search"}
+            </p>
           </div>
-        ) : (
+        )}
+
+        {/* Student Cards */}
+        {!loading && !error && filtered.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filtered.map((student, i) => (
               <motion.div
@@ -416,10 +430,9 @@ const AdminStudentReview = () => {
 
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-4">
-                    {/* Avatar + name */}
                     <div className="flex items-center gap-3">
                       <div className="w-11 h-11 rounded-full bg-[#1C7C84] flex items-center justify-center text-white font-bold text-sm shrink-0">
-                        {student.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                        {student.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
                       </div>
                       <div>
                         <p className="font-bold text-gray-800 text-sm">{student.fullName}</p>
@@ -432,10 +445,10 @@ const AdminStudentReview = () => {
                   {/* Info row */}
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     {[
-                      { icon: Phone,         val: student.phone        },
-                      { icon: Calendar,      val: `${student.age} yrs` },
-                      { icon: MapPin,        val: student.location     },
-                      { icon: GraduationCap, val: student.collegeName  },
+                      { icon: Phone,         val: student.phone                        },
+                      { icon: Calendar,      val: student.age ? `${student.age} yrs` : "N/A" },
+                      { icon: MapPin,        val: student.location || "N/A"            },
+                      { icon: GraduationCap, val: student.collegeName || "N/A"         },
                     ].map(({ icon: Icon, val }) => (
                       <div key={val} className="flex items-center gap-2 bg-[#F4FAFA] rounded-lg px-3 py-2">
                         <Icon className="w-3.5 h-3.5 text-[#1C7C84] shrink-0" />
@@ -445,19 +458,21 @@ const AdminStudentReview = () => {
                   </div>
 
                   {/* Citizenship thumbnails */}
-                  <div className="grid grid-cols-2 gap-2 mb-4">
-                    {[
-                      { src: student.citizenshipFront, label: "Front" },
-                      { src: student.citizenshipBack,  label: "Back"  },
-                    ].map(({ src, label }) => (
-                      <div key={label} className="relative rounded-lg overflow-hidden border border-[#1C7C84]/20 h-20">
-                        <img src={src} alt={label} className="w-full h-full object-cover" />
-                        <span className="absolute bottom-0 left-0 right-0 bg-[#1C7C84]/80 text-white text-xs text-center py-0.5">
-                          {label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {(student.citizenshipFront || student.citizenshipBack) && (
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {[
+                        { src: student.citizenshipFront, label: "Front" },
+                        { src: student.citizenshipBack,  label: "Back"  },
+                      ].filter(d => d.src).map(({ src, label }) => (
+                        <div key={label} className="relative rounded-lg overflow-hidden border border-[#1C7C84]/20 h-20">
+                          <img src={src} alt={label} className="w-full h-full object-cover" />
+                          <span className="absolute bottom-0 left-0 right-0 bg-[#1C7C84]/80 text-white text-xs text-center py-0.5">
+                            {label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Action row */}
                   <div className="flex gap-2">

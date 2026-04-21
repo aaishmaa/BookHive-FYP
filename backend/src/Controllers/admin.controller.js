@@ -9,7 +9,7 @@ try {
   StudentProfile = mod.StudentProfile || mod.default;
 } catch {
   try {
-    const mod = await import('../Models/studentProfile.model.js');
+    const mod = await import('../models/studentProfile.model.js');
     StudentProfile = mod.StudentProfile || mod.default;
   } catch {
     StudentProfile = null;
