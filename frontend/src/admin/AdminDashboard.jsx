@@ -418,22 +418,6 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* ── Reports ── */}
-          {active === "reports" && (
-            <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
-              <BarChart3 className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p className="text-gray-500">Reports & analytics coming soon...</p>
-            </div>
-          )}
-
-          {/* ── Settings ── */}
-          {active === "settings" && (
-            <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
-              <Settings className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p className="text-gray-500">Settings coming soon...</p>
-            </div>
-          )}
-
         </div>
       </div>
     </div>

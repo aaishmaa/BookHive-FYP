@@ -1,5 +1,5 @@
 // backend/src/Tests/payment_transactions.test.js
-// Run: npm run test:payment
+
 
 import { jest } from '@jest/globals';
 import request  from 'supertest';
@@ -97,15 +97,14 @@ describe(' PAYMENT MODULE', () => {
     const res = await request(app)
       .post('/payment/initiate')
       .set('Cookie', cookie)
-      .send({ amount: 500 }); // missing bookId
+      .send({ amount: 500 }); 
 
     expect(res.statusCode).toBe(400);
     expect(res.body.msg).toMatch(/required/i);
   });
 
   // ── UT-54 
-  // Khalti initiate will hit real API and fail with 500 in test env
-  // We just verify it's not a 400/401 auth issue
+  
   test('UT-54 | Initiate Khalti - with auth + fields → not 401', async () => {
     const res = await request(app)
       .post('/payment/initiate')

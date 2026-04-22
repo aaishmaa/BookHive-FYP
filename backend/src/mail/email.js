@@ -4,11 +4,11 @@ import {
   VERIFICATION_EMAIL_TEMPLATE,
   PASSWORD_RESET_REQUEST_TEMPLATE,
   PASSWORD_RESET_SUCCESS_TEMPLATE,
-} from './emailTemplate.js'; // adjust path as needed
+} from './emailTemplate.js'; 
 
 dotenv.config();
 
-console.log("EMAIL_USER:", process.env.EMAIL_USER); // add this temporarily
+console.log("EMAIL_USER:", process.env.EMAIL_USER); 
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS); 
 
 const transporter = nodemailer.createTransport({

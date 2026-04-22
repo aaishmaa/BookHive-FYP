@@ -13,7 +13,7 @@ export const useStudentStore = create((set) => ({
   isLoading: false,
   error: null,
 
-  // Submit student profile form with images
+ 
   createProfile: async (formData) => {
     set({ isLoading: true, error: null });
     try {

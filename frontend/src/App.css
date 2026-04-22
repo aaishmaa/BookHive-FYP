@@ -15,7 +15,7 @@
   background: #e5f5f5;
 }
 
-/* Optional: gradient background helper (you can use via className="bg-login-gradient") */
+
 .bg-login-gradient {
   background: linear-gradient(135deg, #1C7C84 0%, #146C70 100%);
 }

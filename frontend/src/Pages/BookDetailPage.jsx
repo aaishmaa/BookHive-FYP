@@ -430,7 +430,7 @@ const BookDetailPage = () => {
                         <div className="flex-1 min-w-0">
                           <p className="text-[12.5px] font-semibold text-gray-800 truncate">{req.from}</p>
                           {req.offerBookTitle ? (
-                            <p className="text-[11px] text-[#1C7C84] font-medium truncate">📚 Offers: {req.offerBookTitle}</p>
+                            <p className="text-[11px] text-[#1C7C84] font-medium truncate"> Offers: {req.offerBookTitle}</p>
                           ) : req.offer ? (
                             <p className="text-[11px] text-gray-400 truncate">{req.offer}</p>
                           ) : null}

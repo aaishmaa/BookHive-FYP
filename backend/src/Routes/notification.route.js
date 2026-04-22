@@ -4,12 +4,12 @@ import {
   markOneRead, deleteNotification, createNotif,
 } from '../Controllers/notification.controller.js';
 import { verifyToken } from '../Middlewares/VerifyToken.js';
-import { Notification } from '../Models/notification.model.js';
+import { Notification } from '../models/notification.model.js';
 
 const router = express.Router();
 
 router.get('/',           verifyToken, getNotifications);
-router.patch('/read-all', verifyToken, markAllRead);       // MUST be before /:id
+router.patch('/read-all', verifyToken, markAllRead);       
 router.patch('/:id/read', verifyToken, markOneRead);
 router.delete('/:id',     verifyToken, deleteNotification);
 

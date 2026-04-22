@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ExternalLink, Trash2, TrendingUp, Clock, Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useWishlistStore } from "../store/wishlistStore";
-import TopSellers from "../Components/TopSeller";   // ← import
+import TopSellers from "../Components/TopSeller";   
 
 const typeStyle = {
   Sell:     "bg-[#1C7C84]/10 text-[#1C7C84]",

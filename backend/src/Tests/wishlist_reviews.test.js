@@ -47,7 +47,7 @@ beforeAll(async () => {
   }
   cookie = loginRes.headers['set-cookie'][0].split(';')[0];
 
-  // 4. Create a test book (needed for wishlist + review tests)
+  
   const bookRes = await request(app)
     .post('/books')
     .set('Cookie', cookie)
@@ -114,7 +114,7 @@ describe('WISHLIST MODULE', () => {
     expect(res.body.item).toBeDefined();
     expect(res.body.item.bookId.toString()).toBe(bookId);
 
-    wishlistId = res.body.item.id; // save for later tests
+    wishlistId = res.body.item.id; 
   });
 
   // ── UT-32
@@ -218,7 +218,7 @@ describe('REVIEWS MODULE', () => {
     expect(res.body.review).toBeDefined();
     expect(res.body.review.rating).toBe(4);
 
-    reviewId = res.body.review._id; // save for later tests
+    reviewId = res.body.review._id; 
   });
 
   // ── UT-41 

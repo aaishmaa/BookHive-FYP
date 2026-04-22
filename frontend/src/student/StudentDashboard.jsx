@@ -23,7 +23,7 @@ const StudentDashboard = () => {
   const { user } = useAuthStore();
 
   return (
-    // ✅ No min-h-screen, no overflow issues — fills the <main> from AppLayout
+   
     <div className="h-full overflow-y-auto bg-[#F4FAFA] font-sans">
       <main className="max-w-5xl mx-auto px-6 py-8">
 
@@ -152,7 +152,7 @@ const StudentDashboard = () => {
           </div>
         </motion.div>
 
-        {/* ── ADMIN PANEL (admin only) ── */}
+        {/* ── ADMIN PANEL ── */}
         {user?.role === "admin" && (
           <motion.div
             initial={{ opacity: 0 }}

@@ -270,7 +270,7 @@ const ProfilePage = () => {
 
   const handleSaveProfile = (updatedUser) => {
     if (setUser) setUser(updatedUser);
-    else window.location.reload(); // fallback
+    else window.location.reload(); 
   };
 
   return (

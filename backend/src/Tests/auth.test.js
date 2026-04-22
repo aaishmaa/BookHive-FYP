@@ -139,10 +139,10 @@ test('UT-09 | Logout → 200', async () => {
 
 // ── UT-10 
 test('UT-10 | Check Auth after logout → 401', async () => {
-  // authCookie is now '' — no cookie sent, should get 401
+  
   const res = await request(app)
     .get('/auth/check-auth');
-    // ← removed .set('Cookie', authCookie)
+    //  removed .set('Cookie', authCookie)
 
   expect(res.statusCode).toBe(401);
 });

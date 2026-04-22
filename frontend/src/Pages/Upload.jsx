@@ -93,9 +93,9 @@ const UploadPage = () => {
   const [pdfFile,     setPdfFile]     = useState(null);
   const [title,       setTitle]       = useState("");
   const [author,      setAuthor]      = useState("");
-  const [level,       setLevel]       = useState("");        // School | High School (+2) | Bachelor
-  const [classYear,   setClassYear]   = useState("");        // Class 10, 1st Year, etc.
-  const [category,    setCategory]    = useState("");        // subject / field
+  const [level,       setLevel]       = useState("");       
+  const [classYear,   setClassYear]   = useState("");        
+  const [category,    setCategory]    = useState("");        
   const [condition,   setCondition]   = useState("");
   const [price,       setPrice]       = useState("");
   const [description, setDescription] = useState("");
@@ -103,7 +103,7 @@ const UploadPage = () => {
   const [pdfDragging, setPdfDragging] = useState(false);
   const [formError,   setFormError]   = useState("");
 
-  // Clear any stale errors from previous pages on mount
+  
   useEffect(() => {
     if (clearBookError) clearBookError();
   }, []);
@@ -132,7 +132,7 @@ const UploadPage = () => {
 
   const handleLevelChange = (val) => {
     setLevel(val);
-    setClassYear("");   // reset dependent fields
+    setClassYear("");   
     setCategory("");
   };
 

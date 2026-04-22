@@ -16,7 +16,7 @@ const KhaltiPayment = ({ book, onSuccess }) => {
   const [error,   setError]   = useState("");
   const [paid,    setPaid]    = useState(false);
 
-  // Extract numeric price from "Rs. 230" or "₹230"
+
   const priceNum = parseInt(book?.price?.replace(/[^0-9]/g, '') || '0');
 
   const handlePay = async () => {
@@ -25,7 +25,7 @@ const KhaltiPayment = ({ book, onSuccess }) => {
     setError("");
 
     try {
-      // Step 1: Initiate payment → get payment_url
+      // Step 1: Initiate payment - get payment_url
       const res = await axios.post(`${API}/initiate`, {
         bookId:        book._id,
         bookTitle:     book.title,

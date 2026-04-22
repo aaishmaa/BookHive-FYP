@@ -32,7 +32,7 @@ const userB = {
   password: 'Test@1234',
 };
 
-// ── Helper: signup → verify → login → return cookie ──────────────────────────
+
 async function registerAndLogin(user) {
   // 1. Sign up
   await request(app).post('/auth/signup').send(user);
@@ -135,14 +135,14 @@ describe('🔄 REQUESTS MODULE', () => {
     expect(res.body.request).toBeDefined();
     expect(res.body.request.status).toBe('Pending');
 
-    requestId = res.body.request._id; // save for later tests
+    requestId = res.body.request._id; 
   });
 
   // ── UT-24 
   test('UT-24 | Request own book → 400', async () => {
     const res = await request(app)
       .post('/requests')
-      .set('Cookie', cookieA)   // userA owns the book
+      .set('Cookie', cookieA)   
       .send({
         bookId,
         type:       'Exchange',
@@ -173,7 +173,7 @@ describe('🔄 REQUESTS MODULE', () => {
   test('UT-26 | Accept request → 200', async () => {
     const res = await request(app)
       .patch(`/requests/${requestId}`)
-      .set('Cookie', cookieA)   // userA is the book owner → can accept
+      .set('Cookie', cookieA)   
       .send({ status: 'Accepted' });
 
     expect(res.statusCode).toBe(200);
@@ -188,7 +188,7 @@ describe('🔄 REQUESTS MODULE', () => {
       .set('Cookie', cookieB)   // userB is NOT the owner
       .send({ status: 'Accepted' });
 
-    // Either 403 (not authorized) or 400 (already handled)
+    
     expect([400, 403]).toContain(res.statusCode);
   });
 

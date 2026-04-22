@@ -3,7 +3,7 @@ import { getTransactions } from '../Controllers/transaction.controller.js';
 import { verifyToken }     from '../Middlewares/VerifyToken.js';
 
 const router = express.Router();
-
-router.get('/', verifyToken, getTransactions);  // GET /transactions?type=purchase
+// GET /transactions?type=purchase
+router.get('/', verifyToken, getTransactions);  
 
 export default router;

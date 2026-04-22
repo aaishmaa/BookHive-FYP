@@ -11,16 +11,16 @@ const user  = { name: 'Route Tester', email: `rt_${Date.now()}@test.com`, passwo
 const admin = { name: 'Route Admin',  email: `ra_${Date.now()}@test.com`, password: 'Test@1234' };
 
 beforeAll(async () => {
-  // Register both users using /auth/signup (your actual route)
+  
   await request(app).post('/auth/signup').send(user);
   await request(app).post('/auth/signup').send(admin);
 
-  // Mark as verified and set admin role directly in DB
+  
   const { User } = await import('../models/user.model.js');
   await User.findOneAndUpdate({ email: user.email },  { isVerfied: true });
   await User.findOneAndUpdate({ email: admin.email }, { isVerfied: true, role: 'admin' });
 
-  // Use agents — they auto-store and send cookies on every request
+  
   userAgent  = request.agent(app);
   adminAgent = request.agent(app);
 
@@ -84,7 +84,7 @@ describe('🛤️  AUTH ROUTES', () => {
 });
 
 // ── Book Routes ───────────────────────────────────────────────────
-describe('🛤️  BOOK ROUTES', () => {
+describe(' BOOK ROUTES', () => {
 
   // GET / has NO verifyToken in your route — it is public
   test('RT-08 | GET /books – no auth → 200 (public route)', async () => {
@@ -200,7 +200,7 @@ describe('🛤️  REQUEST ROUTES', () => {
 // ── Review Routes ─────────────────────────────────────────────────
 describe('🛤️  REVIEW ROUTES', () => {
 
-  // Your route is /:bookId (not /:id)
+  
   test('RT-28 | GET /reviews/:bookId – no auth → 401', async () => {
     const r = await request(app).get('/reviews/000000000000000000000000');
     expect(r.statusCode).toBe(401);

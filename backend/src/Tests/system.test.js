@@ -15,7 +15,7 @@ describe('ST: System Tests — Full BookHive Flows', () => {
   test('ST-02: Admin user logs in successfully', async () => {
     const res = await request(app).post('/auth/login').send({
       email: 'aaishmamanandhar023@gmail.com',
-      password: 'Aaishma@123'   // ← your real password
+      password: 'Aaishma@123'   
     });
     const cookieHeader = res.headers['set-cookie'];
     cookie = Array.isArray(cookieHeader) ? cookieHeader.join('; ') : cookieHeader || '';
@@ -37,8 +37,8 @@ describe('ST: System Tests — Full BookHive Flows', () => {
         title: 'System Test Book',
         author: 'Auto Tester',
         category: 'Fiction',
-        type: 'Sell',          // ← capital S, matches enum exactly
-        price: '100',          // ← string, matches model
+        type: 'Sell',          
+        price: '100',          
         description: 'Created during system test',
         badge: 'Good',
         level: 'Bachelor'
@@ -66,7 +66,7 @@ describe('ST: System Tests — Full BookHive Flows', () => {
   test('ST-07: Admin route blocked for student user', async () => {
     const loginRes = await request(app).post('/auth/login').send({
       email: 'ujjwalpatel1246@gmail.com',
-      password: 'Ujjwal@123'   // ← Ujjwal's real password
+      password: 'Ujjwal@123'   
     });
     const studentCookie = loginRes.headers['set-cookie']?.join('; ') || '';
     const res = await request(app)

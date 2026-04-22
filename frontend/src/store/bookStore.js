@@ -22,7 +22,7 @@ export const useBookStore = create((set, get) => ({
     get().fetchBooks("all", query, "", "", "");
   },
 
-  // ── fetchBooks now accepts level + classYear ─────────────────────────────────
+  
   fetchBooks: async (type = "all", search = "", category = "", level = "", classYear = "") => {
     set({ isLoading: true, error: null });
     try {

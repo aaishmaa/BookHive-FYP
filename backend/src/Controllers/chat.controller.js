@@ -80,7 +80,7 @@ export const sendMessage = async (req, res) => {
     conv.messages.push(message);
     await conv.save();
 
-    // Return the last message (newly added)
+    // Return the last message 
     const saved = conv.messages[conv.messages.length - 1];
     res.status(201).json({ message: saved });
   } catch (err) {

@@ -52,7 +52,6 @@ export const useNotesStore = create((set, get) => ({
     }
   },
 
-  // ── ADD THIS ──────────────────────────────────────────────────────────────
   downloadNote: async (noteId) => {
   try {
     await axios.patch(`${API_URL}/${noteId}/count`);

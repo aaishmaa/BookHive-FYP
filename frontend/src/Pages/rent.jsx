@@ -99,7 +99,7 @@ function BookCard({ book, index }) {
         <div className="flex items-center justify-between">
           <span className="text-[18px] font-extrabold text-[#1C7C84]">{book.price}</span>
           <button className="flex items-center gap-1.5 bg-[#1C7C84] hover:bg-[#155f65] text-white text-[12.5px] font-semibold px-4 py-2 rounded-lg transition">
-            ⊕ View Details
+             View Details
           </button>
         </div>
       </div>

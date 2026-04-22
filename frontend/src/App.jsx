@@ -34,7 +34,7 @@ import MyListings        from './Pages/MyListings';
 import Requests          from './Pages/Requests';
 import Wishlist          from './Pages/Wishlist';
 import Checkout          from './Pages/Checkout';
-import OrderSuccess      from './Pages/PaymentSuccess';   // your PaymentSuccess.jsx
+import OrderSuccess      from './Pages/PaymentSuccess';   
 
 // Admin pages
 import AdminStudentReview from './admin/Adminstudentreview';

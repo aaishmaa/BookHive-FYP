@@ -42,7 +42,7 @@ const SignUpPage = () => {
     }
     try {
       await signup(email, password, name, userType);
-      navigate("/verify-email"); // after signup → go to login
+      navigate("/verify-email"); 
     } catch (err) {
       console.log(err);
     }

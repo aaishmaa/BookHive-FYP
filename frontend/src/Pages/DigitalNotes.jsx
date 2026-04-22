@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FileText, Heart, MessageCircle, Download, TrendingUp, Clock } from "lucide-react";
 import { useNotesStore } from "../store/notesStore";
-import TopSellers from "../Components/TopSeller";   // ← import
+import TopSellers from "../Components/TopSeller";   
 
 const TABS = ["All", "Computer Science", "Chemistry", "Mathematics", "Law", "Electronics", "Management"];
 

@@ -234,7 +234,7 @@ function BookCard({ book, index, savedIds, onToggleSave }) {
             {/* Enquiries — how many people requested this book */}
             {(book.enquiries ?? 0) > 0 && (
               <span className="flex items-center gap-1 text-[12px] text-amber-500 font-medium">
-                🔥 {book.enquiries} {book.enquiries === 1 ? "request" : "requests"}
+                 {book.enquiries} {book.enquiries === 1 ? "request" : "requests"}
               </span>
             )}
             <button className="text-gray-400 hover:text-[#1C7C84] transition">

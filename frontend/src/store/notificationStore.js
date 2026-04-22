@@ -38,7 +38,7 @@ export const useNotificationStore = create((set) => ({
     try {
       await axios.patch(`${API_URL}/${id}/read`);
       set(state => ({
-        // ← use toString() to safely compare MongoDB ObjectId strings
+       
         notifications: state.notifications.map(n =>
           n.id?.toString() === id?.toString() ? { ...n, unread: false } : n
         ),

@@ -8,7 +8,7 @@ export const dbConnect = async () => {
     }
   } catch (error) {
     console.error(`Error in mongo connect: ${error.message}`);
-    // ← Never call process.exit(1) — it kills Jest
+    
     if (process.env.NODE_ENV !== 'test') {
       process.exit(1);
     }

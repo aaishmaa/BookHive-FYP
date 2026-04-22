@@ -16,7 +16,7 @@ export const useAuthStore = create((set) => ({
   isCheckingAuth: true,
   message: null,
 
-  // ← ADD: lets ProfilePage update user instantly after edit
+ 
   setUser: (user) => set({ user }),
 
   signup: async (email, password, name, userType) => {

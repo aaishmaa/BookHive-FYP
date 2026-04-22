@@ -9,12 +9,12 @@ const API_URL =
 axios.defaults.withCredentials = true;
 
 export const useRequestStore = create((set) => ({
-  requests:     [],   // received
-  sentRequests: [],   // sent
+  requests:     [],   
+  sentRequests: [],   
   isLoading:    false,
   error:        null,
 
-  // ── Fetch BOTH at once — avoids race condition ──────────────────────────────
+  
   fetchAllRequests: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -32,7 +32,7 @@ export const useRequestStore = create((set) => ({
     }
   },
 
-  // ── Fetch received only ─────────────────────────────────────────────────────
+  
   fetchRequests: async () => {
     try {
       const res = await axios.get(API_URL);
@@ -42,7 +42,7 @@ export const useRequestStore = create((set) => ({
     }
   },
 
-  // ── Fetch sent only ─────────────────────────────────────────────────────────
+ 
   fetchSentRequests: async () => {
     try {
       const res = await axios.get(`${API_URL}/sent`);
@@ -52,7 +52,6 @@ export const useRequestStore = create((set) => ({
     }
   },
 
-  // ── Send request ────────────────────────────────────────────────────────────
   sendRequest: async (data) => {
     set({ error: null });
     try {
@@ -66,7 +65,7 @@ export const useRequestStore = create((set) => ({
     }
   },
 
-  // ── Accept / Decline ────────────────────────────────────────────────────────
+  
   updateStatus: async (id, status) => {
     try {
       const res = await axios.patch(`${API_URL}/${id}`, { status });
@@ -84,7 +83,7 @@ export const useRequestStore = create((set) => ({
     }
   },
 
-  // ── Cancel sent request ─────────────────────────────────────────────────────
+  
   cancelRequest: async (id) => {
     try {
       await axios.delete(`${API_URL}/${id}`);

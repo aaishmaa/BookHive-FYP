@@ -8,7 +8,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import axios from "axios";
-import TopSellers from "../Components/TopSeller";   // ← import
+import TopSellers from "../Components/TopSeller";  
 
 const API = import.meta.env.MODE === "development" ? "http://localhost:5000" : "";
 

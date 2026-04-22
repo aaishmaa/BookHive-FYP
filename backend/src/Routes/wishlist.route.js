@@ -3,7 +3,7 @@ import {
   getWishlist, addToWishlist,
   removeFromWishlist, checkWishlist,
 } from '../Controllers/wishlist.controller.js';
-import { verifyToken } from '../Middlewares/verifyToken.js';
+import { verifyToken } from '../Middlewares/VerifyToken.js';
 
 const router = express.Router();
 

@@ -7,7 +7,7 @@ import {
   sendVerificationEmail, sendWelcomeEmail,
   sendPasswordResetEmail, sendPasswordResetSuccessEmail,
 } from '../mail/email.js';
-import { createNotif } from './notification.controller.js';   // ← ADD
+import { createNotif } from './notification.controller.js';   
 
 dotenv.config();
 

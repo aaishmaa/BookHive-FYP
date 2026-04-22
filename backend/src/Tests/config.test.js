@@ -135,12 +135,11 @@ describe(' JWT CONFIG', () => {
   });
 
   test('CF-19 | NODE_ENV is defined', () => {
-    // NODE_ENV may be 'test', 'development', or undefined depending on how Jest is run
-    // We just check it's a non-empty string if set
+   
     if (process.env.NODE_ENV) {
       expect(typeof process.env.NODE_ENV).toBe('string');
     } else {
-      expect(true).toBe(true); // acceptable — not all setups define NODE_ENV
+      expect(true).toBe(true); 
     }
   });
 

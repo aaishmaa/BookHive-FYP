@@ -8,8 +8,8 @@ import { verifyToken } from '../Middlewares/VerifyToken.js';
 
 const router = express.Router();
 
-router.get('/book/:bookId', verifyToken, getBookRequests);  // ← MUST be before /:id
-router.get('/sent',         verifyToken, getSentRequests);  // ← MUST be before /:id
+router.get('/book/:bookId', verifyToken, getBookRequests);  
+router.get('/sent',         verifyToken, getSentRequests);  //  MUST be before /:id
 router.get('/',             verifyToken, getMyRequests);
 router.post('/',            verifyToken, createRequest);
 router.patch('/:id',        verifyToken, updateRequestStatus);

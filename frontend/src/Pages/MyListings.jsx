@@ -163,7 +163,7 @@ const MyListings = () => {
     await updateBook(id, data);
   };
 
-  // Toggle visibility: Active ↔ Disabled
+  // Toggle visibility: Active - Disabled
   const toggleVisibility = async (book) => {
     const newStatus = getStatus(book) === "Disabled" ? "Active" : "Disabled";
     await updateBook(book._id, { status: newStatus });

@@ -5,7 +5,7 @@ import {
   CheckCircle, XCircle, TrendingUp, Loader, RefreshCcw,
 } from "lucide-react";
 import axios from "axios";
-import TopSellers from "../Components/TopSeller";   // ← import
+import TopSellers from "../Components/TopSeller";   
 
 const API = import.meta.env.MODE === "development"
   ? "http://localhost:5000/transactions"

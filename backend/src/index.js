@@ -29,7 +29,7 @@ dotenv.config();
 const app    = express();
 const server = createServer(app);
 
-// ── Socket.io — skip in test mode to avoid port conflicts ─────────────────────
+
 if (process.env.NODE_ENV !== 'test') {
   const io = new Server(server, {
     cors: {
@@ -84,4 +84,4 @@ if (process.env.NODE_ENV !== 'test') {
   server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 }
 
-export default app;   // ← Supertest imports this
+export default app;   

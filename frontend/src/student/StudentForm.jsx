@@ -194,7 +194,7 @@ const StudentProfileForm = () => {
 
           <div className="px-8 py-8">
 
-            {/* ── STEP 1 ── */}
+          
             {step === 1 && (
               <div className="space-y-5">
 
@@ -387,7 +387,7 @@ const StudentProfileForm = () => {
             {step === 2 && (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <p className="text-sm text-gray-500 bg-[#F4FAFA] rounded-lg px-4 py-3 border border-dashed border-[#1C7C84]">
-                  📌 Please upload a clear photo of both sides of your citizenship card or government-issued ID.
+                   Please upload a clear photo of both sides of your citizenship card or government-issued ID.
                 </p>
 
                 {/* Front Upload */}

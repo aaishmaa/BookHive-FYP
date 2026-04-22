@@ -19,11 +19,11 @@ const pngBuf = Buffer.from(
   'base64'
 );
 
-// ✅ Use os.tmpdir() so it works on both Windows and Linux
+
 const tmpFile = path.join(os.tmpdir(), 'ct_test.png');
 
 async function setup(u, role = 'student') {
-  // ✅ changed /auth/register → /auth/signup
+ 
   await request(app).post('/auth/signup').send(u);
   const { User } = await import('../models/user.model.js');
   await User.findOneAndUpdate({ email: u.email }, { isVerfied: true, role });
@@ -36,7 +36,7 @@ beforeAll(async () => {
   cookie2     = await setup(user2);
   adminCookie = await setup(admin, 'admin');
 
-  // ✅ Write to OS temp dir (works on Windows)
+  
   fs.writeFileSync(tmpFile, pngBuf);
   const br = await request(app).post('/books').set('Cookie', cookie1)
     .attach('images', tmpFile)
@@ -51,7 +51,7 @@ beforeAll(async () => {
 
   bookId = br.body.book?._id || '';
 
-  // ✅ Clean up temp file safely
+
   if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
 });
 
@@ -60,7 +60,7 @@ afterAll(async () => {
   const { Book }    = await import('../models/book.model.js');
   const { Request } = await import('../models/request.model.js');
 
-  // ✅ Only delete if bookId is a valid ObjectId string
+  // Only delete if bookId is a valid ObjectId string
   if (bookId && mongoose.Types.ObjectId.isValid(bookId)) {
     await Request.deleteMany({ bookId });
     await Book.deleteMany({ seller: user1.name });

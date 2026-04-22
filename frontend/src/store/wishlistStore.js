@@ -45,11 +45,11 @@ export const useWishlistStore = create((set) => ({
     }
   },
 
-  // Used on BookDetailPage to check if a book is already saved
+  
   checkSaved: async (bookId) => {
     try {
       const res = await axios.get(`${API_URL}/check/${bookId}`);
-      return res.data;  // { saved: bool, id: wishlistItemId }
+      return res.data;  
     } catch {
       return { saved: false, id: null };
     }

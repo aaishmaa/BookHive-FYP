@@ -12,7 +12,7 @@ export const generateTokenAndSetCookie = (res, id) => {
     httpOnly: true,
     sameSite: isProduction ? 'none' : 'lax',   // 'lax' works on localhost
     maxAge:   7 * 24 * 60 * 60 * 1000,
-    secure:   isProduction,                     // false on localhost (http)
+    secure:   isProduction, // false on localhost (http)
   };
 
   res.cookie('token', token, cookieOptions);

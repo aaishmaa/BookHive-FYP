@@ -36,7 +36,7 @@ export const useChatStore = create((set, get) => ({
     socket.on('message:receive', ({ conversationId, message }) => {
       const { conversations, activeConversation } = get();
 
-      // Add message to active conversation if open
+      
       if (activeConversation?._id === conversationId) {
         set({
           activeConversation: {

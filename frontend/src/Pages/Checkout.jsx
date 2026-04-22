@@ -219,7 +219,7 @@ const Checkout = () => {
               </button>
 
               <p className="text-[10.5px] text-gray-400 mt-3">
-                🔒 QR expires in 10 minutes. Do not close this page.
+                 QR expires in 10 minutes. Do not close this page.
               </p>
             </motion.div>
           </div>
